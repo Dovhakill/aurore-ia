@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Dépendances pour les fonctions Netlify du projet Aurore.",
   "dependencies": {
-    "@netlify/blobs": "^7.0.0"
+    "@netlify/blobs": "^7.0.0",
+    "node-fetch": "^2.6.7"
   }
 }
