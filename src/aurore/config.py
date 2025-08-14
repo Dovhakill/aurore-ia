@@ -13,7 +13,7 @@ class Settings:
     BLOBS_PROXY_URL = os.environ.get("BLOBS_PROXY_URL")
     AURORE_BLOBS_TOKEN = os.environ.get("AURORE_BLOBS_TOKEN")
     USER_AGENT = "Aurore/1.0 (+https://l-horizon-libre.fr)"
-    MAX_ARTICLES_PER_RUN = int(os.environ.get("MAX_ARTICLES_PER_RUN", "2"))
+    MAX_ARTICLES_PER_RUN = int(os.environ.get("MAX_ARTICLES_PER_RUN", "1"))
 
     @classmethod
     def validate(cls):
