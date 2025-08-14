@@ -33,7 +33,7 @@ jobs:
           echo "Valeur de la variable : ${{ vars.BLOBS_PROXY_URL }}"
           echo "--- Fin du débogage ---"
 
-- name: Run Aurore
+      - name: Run Aurore
         env:
           # --- Les SECRETS ---
           GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}      # <- LA LIGNE IMPORTANTE
