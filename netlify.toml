@@ -1,6 +1,14 @@
-[build]
-  publish = "public"
-  command = "echo Functions only"
+# Fichier de configuration pour Netlify
 
+[build]
+  # On n'a pas de site à "builder", juste des fonctions
+  command = "echo 'Aucun build nécessaire'"
+  publish = "public" # Un dossier public factice est parfois requis
+
+# Indique à Netlify où trouver les fonctions
 [functions]
   directory = "netlify/functions"
+
+# Spécifie la version de Node.js pour notre fonction proxy en JavaScript
+[build.environment]
+  NODE_VERSION = "20"
