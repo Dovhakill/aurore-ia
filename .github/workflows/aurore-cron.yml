@@ -33,19 +33,19 @@ jobs:
           echo "Valeur de la variable : ${{ vars.BLOBS_PROXY_URL }}"
           echo "--- Fin du débogage ---"
 
-      - name: Run Aurore
+- name: Run Aurore
         env:
-          # --- Les VRAIS SECRETS ---
-          NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
+          # --- Les SECRETS ---
+          GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}      # <- LA LIGNE IMPORTANTE
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           AURORE_BLOBS_TOKEN: ${{ secrets.AURORE_BLOBS_TOKEN }}
 
-          # --- Les VARIABLES de configuration ---
+          # --- Les VARIABLES ---
           BLOBS_PROXY_URL: ${{ vars.BLOBS_PROXY_URL }}
-          GH_SITE_REPO: ${{ vars.GH_SITE_REPO }}         # <- CHANGEMENT ICI
-          GH_AUTHOR_NAME: ${{ vars.GH_AUTHOR_NAME }}   # <- CHANGEMENT ICI
-          GH_AUTHOR_EMAIL: ${{ vars.GH_AUTHOR_EMAIL }} # <- CHANGEMENT ICI
+          GH_SITE_REPO: ${{ vars.GH_SITE_REPO }}
+          GH_AUTHOR_NAME: ${{ vars.GH_AUTHOR_NAME }}
+          GH_AUTHOR_EMAIL: ${{ vars.GH_AUTHOR_EMAIL }}
           MAX_ARTICLES_PER_RUN: "2"
         run: |
           python -m src.aurore
