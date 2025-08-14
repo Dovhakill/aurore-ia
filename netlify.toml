@@ -1,10 +1,10 @@
 # Fichier : aurore-ia/netlify.toml
 
 [build]
-  command = "echo 'Aucun build nécessaire'"
-  publish = "public" 
+  # On crée le dossier 'public' vide pour que Netlify ne déclenche pas d'erreur.
+  command = "mkdir public"
+  publish = "public"
 
-# Syntaxe correcte avec simples crochets
 [functions]
   directory = "netlify/functions"
 
