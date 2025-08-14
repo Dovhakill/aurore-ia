@@ -1,3 +1,15 @@
+from .config import Settings
+from .news_fetch import fetch_top_fr, find_additional_sources
+from .dedup import seen, mark
+from .summarize import synthesize_neutral
+from .render import render_article
+from .github_pr import open_pr
+from .utils import topic_key
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("aurore")
+
 def run_once():
     Settings.validate()
     candidates = fetch_top_fr(page_size=20)
@@ -20,6 +32,7 @@ def run_once():
     
     sources = find_additional_sources(title, first_article.get("url"), max_sources=3)
     if len(sources) < 3:
+        # Duplique les sources si on n'en trouve pas 3, pour que le prompt de l'IA ait la bonne structure
         sources = (sources * 3)[:3]
 
     key = topic_key(title, sources)
