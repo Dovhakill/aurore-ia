@@ -1,9 +1,7 @@
-# src/aurore/news_fetch.py
 import requests
 from urllib.parse import urlparse
 from .config import Settings
 
-# Nouvelle URL de l'API GNews
 GNEWS_API_TOP = "https://gnews.io/api/v4/top-headlines"
 GNEWS_API_SEARCH = "https://gnews.io/api/v4/search"
 
@@ -21,12 +19,14 @@ def fetch_top_fr(page_size: int = 40):
         "max": page_size,
     }
     
-    r = requests.get(GNEWS_API_TOP, params=params, timeout=20)
+    # MODIFICATION : On ajoute les en-têtes (headers) avec notre User-Agent
+    headers = {"User-Agent": Settings.USER_AGENT}
+    
+    r = requests.get(GNEWS_API_TOP, params=params, headers=headers, timeout=20)
     r.raise_for_status()
     data = r.json()
     
     out = []
-    # La structure de la réponse de GNews est légèrement différente
     for a in data.get("articles", []):
         if not a.get("url") or not a.get("title"):
             continue
@@ -48,8 +48,12 @@ def find_additional_sources(topic: str, existing_url: str, max_sources: int = 3)
         "lang": "fr",
         "max": 15,
     }
+    
+    # MODIFICATION : On ajoute aussi les en-têtes ici
+    headers = {"User-Agent": Settings.USER_AGENT}
+    
     try:
-        r = requests.get(GNEWS_API_SEARCH, params=params, timeout=20)
+        r = requests.get(GNEWS_API_SEARCH, params=params, headers=headers, timeout=20)
         r.raise_for_status()
         articles = r.json().get("articles", [])
     except Exception:
