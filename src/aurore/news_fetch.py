@@ -1,28 +1,20 @@
+# src/aurore/news_fetch.py
 import requests
+import json
 from urllib.parse import urlparse
 from .config import Settings
 
-GNEWS_API_TOP = "https://gnews.io/api/v4/top-headlines"
-GNEWS_API_SEARCH = "https://gnews.io/api/v4/search"
+# On construit l'URL du nouveau proxy GNews à partir de l'URL du proxy mémoire
+GNEWS_PROXY_URL = Settings.BLOBS_PROXY_URL.replace("blobs-proxy", "gnews-proxy")
 
-def _domain(url: str) -> str:
-    try:
-        return urlparse(url).netloc
-    except Exception:
-        return ""
+def _auth_headers():
+    """Prépare les en-têtes pour s'authentifier auprès de nos PROPRES proxys."""
+    return {"X-AURORE-TOKEN": Settings.AURORE_BLOBS_TOKEN}
 
 def fetch_top_fr(page_size: int = 40):
-    """Fetches general international top headlines from GNews."""
-    params = {
-        "apikey": Settings.GNEWS_API_KEY,
-        "lang": "fr",
-        "max": page_size,
-    }
+    """Récupère les news en appelant notre propre proxy Netlify."""
     
-    # MODIFICATION : On ajoute les en-têtes (headers) avec notre User-Agent
-    headers = {"User-Agent": Settings.USER_AGENT}
-    
-    r = requests.get(GNEWS_API_TOP, params=params, headers=headers, timeout=20)
+    r = requests.get(GNEWS_PROXY_URL, headers=_auth_headers(), timeout=30)
     r.raise_for_status()
     data = r.json()
     
@@ -40,38 +32,13 @@ def fetch_top_fr(page_size: int = 40):
         })
     return out
 
+# Note : cette fonction n'est plus très fiable car on ne peut pas faire de recherche
+# aussi précise via notre proxy simple. On la garde simplifiée.
 def find_additional_sources(topic: str, existing_url: str, max_sources: int = 3):
-    """Finds additional sources for a given topic using GNews."""
-    params = {
-        "apikey": Settings.GNEWS_API_KEY,
-        "q": f'"{topic}"',
-        "lang": "fr",
-        "max": 15,
-    }
-    
-    # MODIFICATION : On ajoute aussi les en-têtes ici
-    headers = {"User-Agent": Settings.USER_AGENT}
-    
-    try:
-        r = requests.get(GNEWS_API_SEARCH, params=params, headers=headers, timeout=20)
-        r.raise_for_status()
-        articles = r.json().get("articles", [])
-    except Exception:
-        articles = []
+    return [existing_url]
 
-    sources = [existing_url]
-    domains_seen = {_domain(existing_url)}
-    
-    for art in articles:
-        url = art.get("url")
-        if not url:
-            continue
-            
-        dom = _domain(url)
-        if dom and dom not in domains_seen:
-            domains_seen.add(dom)
-            sources.append(url)
-            if len(sources) >= max_sources:
-                break
-                
-    return sources
+def _domain(url: str) -> str:
+    try:
+        return urlparse(url).netloc
+    except Exception:
+        return ""
