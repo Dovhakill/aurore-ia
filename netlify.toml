@@ -1,14 +1,12 @@
-# Fichier de configuration pour Netlify
+# Fichier : aurore-ia/netlify.toml
 
 [build]
-  # On n'a pas de site à "builder", juste des fonctions
   command = "echo 'Aucun build nécessaire'"
-  publish = "public" # Un dossier public factice est parfois requis
+  publish = "public" 
 
-# Indique à Netlify où trouver les fonctions
+# Syntaxe correcte avec simples crochets
 [functions]
   directory = "netlify/functions"
 
-# Spécifie la version de Node.js pour notre fonction proxy en JavaScript
 [build.environment]
   NODE_VERSION = "20"
