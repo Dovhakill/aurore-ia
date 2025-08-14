@@ -1,36 +1,32 @@
-# Fichier : src/aurore/news_fetch.py
-
+# src/aurore/news_fetch.py
 import requests
 from urllib.parse import urlparse
 from .config import Settings
 
-# On utilise l'endpoint /top-headlines pour les actualités générales
-NEWSAPI_TOP = "https://newsapi.org/v2/top-headlines"
-NEWSAPI_EVERYTHING = "https://newsapi.org/v2/everything"
+# Nouvelle URL de l'API GNews
+GNEWS_API_TOP = "https://gnews.io/api/v4/top-headlines"
+GNEWS_API_SEARCH = "https://gnews.io/api/v4/search"
 
 def _domain(url: str) -> str:
-    """Helper function to extract the domain from a URL."""
     try:
         return urlparse(url).netloc
     except Exception:
         return ""
 
 def fetch_top_fr(page_size: int = 40):
-    """
-    Fetches general international top headlines from French-speaking sources.
-    """
+    """Fetches general international top headlines from GNews."""
     params = {
-        "apiKey": Settings.NEWSAPI_KEY,
-        "language": "fr",  # On garde le filtre de la langue
-        "pageSize": page_size,
-        # On enlève "country" et "q" pour avoir les news internationales
+        "apikey": Settings.GNEWS_API_KEY,
+        "lang": "fr",
+        "max": page_size,
     }
     
-    r = requests.get(NEWSAPI_TOP, params=params, timeout=20)
+    r = requests.get(GNEWS_API_TOP, params=params, timeout=20)
     r.raise_for_status()
     data = r.json()
     
     out = []
+    # La structure de la réponse de GNews est légèrement différente
     for a in data.get("articles", []):
         if not a.get("url") or not a.get("title"):
             continue
@@ -45,16 +41,15 @@ def fetch_top_fr(page_size: int = 40):
     return out
 
 def find_additional_sources(topic: str, existing_url: str, max_sources: int = 3):
-    """Finds additional sources for a given topic."""
+    """Finds additional sources for a given topic using GNews."""
     params = {
-        "apiKey": Settings.NEWSAPI_KEY,
+        "apikey": Settings.GNEWS_API_KEY,
         "q": f'"{topic}"',
-        "language": "fr",
-        "sortBy": "relevancy",
-        "pageSize": 15
+        "lang": "fr",
+        "max": 15,
     }
     try:
-        r = requests.get(NEWSAPI_EVERYTHING, params=params, timeout=20)
+        r = requests.get(GNEWS_API_SEARCH, params=params, timeout=20)
         r.raise_for_status()
         articles = r.json().get("articles", [])
     except Exception:
