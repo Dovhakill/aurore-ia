@@ -1,43 +1,39 @@
-// On utilise 'require' au lieu de 'import' pour la compatibilité
 const { getStore } = require("@netlify/blobs");
+// On importe le module de cryptographie de Node.js
+const crypto = require("crypto");
 
-// C'est la syntaxe pour une fonction Netlify "Standard"
 exports.handler = async (event) => {
   const secret = process.env.AURORE_BLOBS_TOKEN;
-  // Les en-têtes sont dans event.headers
-  const got = event.headers["x-aurore-token"];
+  
+  // --- LIGNES DE DÉBOGAGE ---
+  if (secret) {
+    const hash = crypto.createHash('sha256').update(secret).digest('hex');
+    console.log(`[DEBUG NETLIFY] Empreinte du token attendu : ${hash.substring(0, 10)}...`);
+  } else {
+    console.log("[DEBUG NETLIFY] Le secret AURORE_BLOBS_TOKEN n'est PAS DÉFINI sur Netlify !");
+  }
+  // --- FIN DU DÉBOGAGE ---
 
+  const got = event.headers["x-aurore-token"];
   if (!secret || got !== secret) {
     return { statusCode: 401, body: "Unauthorized" };
   }
 
   const store = getStore("aurore-memory");
 
-  // La méthode de la requête est dans event.httpMethod
   if (event.httpMethod === "GET") {
-    // Les paramètres d'URL sont dans event.queryStringParameters
     const key = event.queryStringParameters.key;
-    if (!key) {
-      return { statusCode: 400, body: "Missing key" };
-    }
-
+    if (!key) return { statusCode: 400, body: "Missing key" };
     const val = await store.get(key);
-    if (!val) {
-      return { statusCode: 404, body: "Not found" };
-    }
-    
+    if (!val) return { statusCode: 404, body: "Not found" };
     return { statusCode: 200, body: val };
   }
 
   if (event.httpMethod === "POST") {
     try {
-      // Le corps de la requête est une chaîne de caractères qu'il faut parser
       const body = JSON.parse(event.body);
       const { key, meta } = body || {};
-      if (!key) {
-        return { statusCode: 400, body: "Missing key" };
-      }
-
+      if (!key) return { statusCode: 400, body: "Missing key" };
       await store.setJSON(key, meta || {});
       return { statusCode: 201, body: "OK" };
     } catch (err) {
