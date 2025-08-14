@@ -1,25 +1,49 @@
+// On utilise 'require' au lieu de 'import' pour la compatibilité
 const { getStore } = require("@netlify/blobs");
-exports.handler = async function (event) {
+
+// C'est la syntaxe pour une fonction Netlify "Standard"
+exports.handler = async (event) => {
   const secret = process.env.AURORE_BLOBS_TOKEN;
-  const got = event.headers["x-aurore-token"] || event.headers["X-AURORE-TOKEN"];
-  if (!secret || got !== secret) return { statusCode: 401, body: "Unauthorized" };
+  // Les en-têtes sont dans event.headers
+  const got = event.headers["x-aurore-token"];
+
+  if (!secret || got !== secret) {
+    return { statusCode: 401, body: "Unauthorized" };
+  }
+
   const store = getStore("aurore-memory");
+
+  // La méthode de la requête est dans event.httpMethod
   if (event.httpMethod === "GET") {
-    const key = (event.queryStringParameters || {}).key;
-    if (!key) return { statusCode: 400, body: "Missing key" };
+    // Les paramètres d'URL sont dans event.queryStringParameters
+    const key = event.queryStringParameters.key;
+    if (!key) {
+      return { statusCode: 400, body: "Missing key" };
+    }
+
     const val = await store.get(key);
-    if (!val) return { statusCode: 404, body: "Not found" };
+    if (!val) {
+      return { statusCode: 404, body: "Not found" };
+    }
+    
     return { statusCode: 200, body: val };
   }
+
   if (event.httpMethod === "POST") {
     try {
-      const { key, meta } = JSON.parse(event.body || "{}");
-      if (!key) return { statusCode: 400, body: "Missing key" };
+      // Le corps de la requête est une chaîne de caractères qu'il faut parser
+      const body = JSON.parse(event.body);
+      const { key, meta } = body || {};
+      if (!key) {
+        return { statusCode: 400, body: "Missing key" };
+      }
+
       await store.setJSON(key, meta || {});
       return { statusCode: 201, body: "OK" };
-    } catch {
-      return { statusCode: 400, body: "Bad Request" };
+    } catch (err) {
+      return { statusCode: 400, body: "Bad Request: Invalid JSON" };
     }
   }
+
   return { statusCode: 405, body: "Method Not Allowed" };
 };
