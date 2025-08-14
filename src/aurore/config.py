@@ -1,7 +1,10 @@
+# src/aurore/config.py
 import os
 
 class Settings:
-    NEWSAPI_KEY = os.environ.get("NEWSAPI_KEY")
+    # On change la clé API
+    GNEWS_API_KEY = os.environ.get("GNEWS_API_KEY")
+    
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
     GH_TOKEN = os.environ.get("GH_TOKEN")
     GH_SITE_REPO = os.environ.get("GH_SITE_REPO")
@@ -15,7 +18,8 @@ class Settings:
     @classmethod
     def validate(cls):
         missing = []
-        for attr in ["NEWSAPI_KEY", "GEMINI_API_KEY", "GH_TOKEN", "GH_SITE_REPO", "BLOBS_PROXY_URL", "AURORE_BLOBS_TOKEN"]:
+        # On vérifie la nouvelle clé
+        for attr in ["GNEWS_API_KEY", "GEMINI_API_KEY", "GH_TOKEN", "GH_SITE_REPO", "BLOBS_PROXY_URL", "AURORE_BLOBS_TOKEN"]:
             if not getattr(cls, attr):
                 missing.append(attr)
         if missing:
