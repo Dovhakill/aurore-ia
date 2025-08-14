@@ -1,14 +1,11 @@
 name: Aurore - cron
-
 on:
   schedule:
-    - cron: "*/10 * * * *" # toutes les 10 minutes
+    - cron: "*/10 * * * *"   # toutes les 10 minutes
   workflow_dispatch: {}
-
 permissions:
   contents: write
   pull-requests: write
-
 jobs:
   run-aurore:
     runs-on: ubuntu-latest
@@ -25,6 +22,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # --- NOUVELLE ÉTAPE DE DÉBOGAGE ---
+      - name: DEBUG - Afficher les variables d'environnement
+        run: |
+          echo "--- Liste de toutes les variables d'environnement disponibles ---"
+          env | sort
+          echo "--- Vérification spécifique de BLOBS_PROXY_URL ---"
+          echo "La variable BLOBS_PROXY_URL est-elle définie ? (via env) -> ${{ env.BLOBS_PROXY_URL != '' }}"
+          echo "La variable BLOBS_PROXY_URL est-elle définie ? (via vars) -> ${{ vars.BLOBS_PROXY_URL != '' }}"
+          echo "Valeur de la variable : ${{ vars.BLOBS_PROXY_URL }}"
+          echo "--- Fin du débogage ---"
+
       - name: Run Aurore
         env:
           NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
@@ -36,4 +44,5 @@ jobs:
           AURORE_BLOBS_TOKEN: ${{ secrets.AURORE_BLOBS_TOKEN }}
           BLOBS_PROXY_URL: ${{ vars.BLOBS_PROXY_URL }}
           MAX_ARTICLES_PER_RUN: "2"
-        run: python -m src.aurore
+        run: |
+          python -m src.aurore
