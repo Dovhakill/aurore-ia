@@ -1,6 +1,5 @@
 - name: Run Aurore
   run: python -m src.aurore
-
 on:
   schedule:
     - cron: '*/10 * * * *' # toutes les 10 minutes
