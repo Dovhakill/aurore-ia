@@ -2,6 +2,7 @@ import requests
 from urllib.parse import urlparse
 from .config import Settings
 
+# On utilise l'endpoint /top-headlines pour les actualités générales
 NEWSAPI_TOP = "https://newsapi.org/v2/top-headlines"
 NEWSAPI_EVERYTHING = "https://newsapi.org/v2/everything"
 
@@ -14,14 +15,13 @@ def _domain(url: str) -> str:
 
 def fetch_top_fr(page_size: int = 40):
     """
-    Fetches general top headlines from French sources.
-    This query is intentionally broad to ensure we get results.
+    Fetches general international top headlines from French-speaking sources.
     """
     params = {
         "apiKey": Settings.NEWSAPI_KEY,
-        "language": "fr",
-        "country": "fr",
+        "language": "fr",  # On garde le filtre de la langue
         "pageSize": page_size,
+        # On enlève "country" et "q" pour avoir les news internationales
     }
     
     r = requests.get(NEWSAPI_TOP, params=params, timeout=20)
@@ -30,7 +30,6 @@ def fetch_top_fr(page_size: int = 40):
     
     out = []
     for a in data.get("articles", []):
-        # We ensure that the article has at least a URL and a title to be useful
         if not a.get("url") or not a.get("title"):
             continue
         
@@ -44,10 +43,10 @@ def fetch_top_fr(page_size: int = 40):
     return out
 
 def find_additional_sources(topic: str, existing_url: str, max_sources: int = 3):
-    """Finds additional sources for a given topic, excluding the original source's domain."""
+    """Finds additional sources for a given topic."""
     params = {
         "apiKey": Settings.NEWSAPI_KEY,
-        "q": f'"{topic}"',  # Search for the exact title for better relevancy
+        "q": f'"{topic}"',
         "language": "fr",
         "sortBy": "relevancy",
         "pageSize": 15
