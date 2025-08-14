@@ -1,3 +1,5 @@
+# Fichier : src/aurore/news_fetch.py
+
 import requests
 from urllib.parse import urlparse
 from .config import Settings
