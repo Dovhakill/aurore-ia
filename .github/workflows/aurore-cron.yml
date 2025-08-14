@@ -22,18 +22,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # --- NOUVELLE ÉTAPE DE DÉBOGAGE ---
-      - name: DEBUG - Afficher les variables d'environnement
+      # ... (étapes précédentes)
+      - name: DEBUG - Afficher les variables et empreintes
         run: |
-          echo "--- Liste de toutes les variables d'environnement disponibles ---"
-          env | sort
-          echo "--- Vérification spécifique de BLOBS_PROXY_URL ---"
-          echo "La variable BLOBS_PROXY_URL est-elle définie ? (via env) -> ${{ env.BLOBS_PROXY_URL != '' }}"
+          echo "--- Vérification des variables ---"
           echo "La variable BLOBS_PROXY_URL est-elle définie ? (via vars) -> ${{ vars.BLOBS_PROXY_URL != '' }}"
-          echo "Valeur de la variable : ${{ vars.BLOBS_PROXY_URL }}"
+          echo "Valeur : ${{ vars.BLOBS_PROXY_URL }}"
+          echo "--- Vérification de l'empreinte du token ---"
+          echo -n "${{ secrets.AURORE_BLOBS_TOKEN }}" | sha256sum | awk '{print "[DEBUG GITHUB] Empreinte du token utilisé : " substr($1, 1, 10) "..."}'
           echo "--- Fin du débogage ---"
 
       - name: Run Aurore
+      # ... (le reste du fichier)
         env:
           # --- Les SECRETS ---
           GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}      # <- LA LIGNE IMPORTANTE
