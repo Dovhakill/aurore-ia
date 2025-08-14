@@ -71,7 +71,7 @@ Sources :
     )
     
     # MODIFICATION 3: On crée une instance du modèle et on génère le contenu
-    model = genai.GenerativeModel("gemini-1.5-pro-latest")
+    model = genai.GenerativeModel("gemini-1.0-pro")
     
     resp = model.generate_content(
         contents=contents,
