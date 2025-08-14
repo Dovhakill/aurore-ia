@@ -1,0 +1,8 @@
+{
+  "name": "aurore-infrastructure",
+  "version": "1.0.0",
+  "description": "Dépendances pour les fonctions Netlify du projet Aurore.",
+  "dependencies": {
+    "@netlify/blobs": "^7.0.0"
+  }
+}
