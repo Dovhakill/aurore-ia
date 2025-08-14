@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }} | L’Horizon Libre</title>
+  <meta name="description" content="{{ meta.description }}">
+  <meta name="keywords" content="{{ meta.keywords | join(', ') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta property="og:title" content="{{ title }}">
+  <meta property="og:description" content="{{ meta.description }}">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://l-horizon-libre.fr/articles/{{ slug }}.html">
+  <meta property="og:site_name" content="L’Horizon Libre">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ title }}">
+  <meta name="twitter:description" content="{{ meta.description }}">
+</head>
+<body>
+<main>
+  <article>
+    <header>
+      <h1>{{ title }}</h1>
+      <p class="dek">{{ dek }}</p>
+      <time datetime="{{ published_iso }}">{{ published_iso }}</time>
+    </header>
+    <section class="content">
+      {{ body | safe }}
+    </section>
+    {% if bullets %}
+    <section class="key-points">
+      <h3>Points clés</h3>
+      <ul>
+        {% for b in bullets %}
+        <li>{{ b }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+    <footer>
+      <h3>Sources</h3>
+      <ul>
+        {% for u in sources %}
+        <li><a href="{{ u }}?utm_source=aurore&utm_medium=article&utm_campaign=l_horizon_libre" target="_blank" rel="noopener noreferrer">{{ u }}</a></li>
+        {% endfor %}
+      </ul>
+    </footer>
+  </article>
+</main>
+</body>
+</html>
