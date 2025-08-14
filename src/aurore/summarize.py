@@ -1,9 +1,12 @@
+# Dans src/aurore/summarize.py
+
 from typing import Sequence
 import requests
 from bs4 import BeautifulSoup
 import json
-from google.genai import Client
-from google.genai.types import ResponseParams
+from google.generativeai import Client
+# MODIFICATION 1 : On importe GenerationConfig au lieu de ResponseParams
+from google.generativeai.types import GenerationConfig
 from .config import Settings
 
 def fetch_text(url: str) -> str:
@@ -22,25 +25,18 @@ def synthesize_neutral(topic: str, sources: Sequence[str]) -> dict:
     client = Client(api_key=Settings.GEMINI_API_KEY)
 
     prompt = f"""
-Tu es un journaliste factuel expert en SEO qui écrit en français.
-Fusionne les informations des sources en un article neutre et clair.
-Répond EXCLUSIVEMENT en JSON valide.
+Tu es un journaliste factuel qui écrit en français.
+Fusionne les informations des trois sources en un article neutre et clair.
+Répond EXCLUSIVEMENT en JSON valide au format suivant :
 
-Contraintes :
-- "body": HTML sémantique uniquement (balises <p>, <ul><li>, <strong>), pas de <h1>/<h2>.
-- "dek": obligatoire, 20–40 mots.
-- "meta.description": 150–160 caractères max, une seule phrase.
-- "meta.keywords": 3 à 5 mots-clés pertinents.
-
-Format attendu :
-{{ 
-  "title": "Titre court et précis (50–70 caractères)",
-  "dek": "Chapeau introductif de 1–2 phrases, engageant et informatif.",
-  "body": "<p>HTML structuré de l'article…</p>",
+{{
+  "title": "Titre court et précis",
+  "dek": "Chapeau introductif de 1-2 phrases",
+  "body": "<p>HTML structuré de l'article</p>",
   "bullets": ["Point clé 1", "Point clé 2", "Point clé 3"],
   "meta": {{
-    "keywords": ["mot", "clé", "pertinent"],
-    "description": "Phrase unique optimisée SEO (150–160 caractères)."
+    "keywords": ["mot", "clé"],
+    "description": "Phrase descriptive optimisée SEO"
   }}
 }}
 
@@ -50,6 +46,8 @@ Sources :
 1. {sources[0]}
 2. {sources[1]}
 3. {sources[2]}
+
+Utilise le contenu fourni des sources et cite-les dans une section "Sources".
 """
 
     contents = [{"role": "user", "parts": [{"text": prompt}]}]
@@ -58,11 +56,18 @@ Sources :
             "role": "user",
             "parts": [{"text": f"--- Contenu Source {idx} ({src}) ---\n{fetch_text(src)[:4000]}"}]
         })
+    
+    # MODIFICATION 2 : On utilise "generation_config" et "GenerationConfig"
+    generation_config = GenerationConfig(
+        temperature=0.3,
+        max_output_tokens=1200
+    )
 
     resp = client.models.generate_content(
-        model="gemini-2.5-pro",
+        # MODIFICATION 3 : J'utilise un nom de modèle plus standard au cas où
+        model="gemini-1.5-pro-latest",
         contents=contents,
-        config=ResponseParams(temperature=0.3, max_output_tokens=1200)
+        generation_config=generation_config
     )
 
     text = resp.text or ""
@@ -72,7 +77,7 @@ Sources :
         return {
             "title": topic[:120],
             "dek": "",
-            "body": "<p>" + text.replace("\\n", "<br/>") + "</p>",
+            "body": "<p>" + text.replace("\n", "<br/>") + "</p>",
             "bullets": [],
             "meta": {"keywords": [], "description": topic[:150]}
         }
