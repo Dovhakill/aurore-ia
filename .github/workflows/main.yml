@@ -1,4 +1,5 @@
-name: Aurore - cron
+- name: Run Aurore
+  run: python -m src.aurore
 
 on:
   schedule:
