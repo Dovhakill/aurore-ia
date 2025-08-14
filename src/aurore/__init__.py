@@ -1,3 +1,5 @@
+# src/aurore/__init__.py
+
 from .config import Settings
 from .news_fetch import fetch_top_fr, find_additional_sources
 from .dedup import seen, mark
@@ -7,21 +9,30 @@ from .github_pr import open_pr
 from .utils import topic_key, canonical_slug
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("aurore")
 
 def run_once():
     Settings.validate()
     candidates = fetch_top_fr(page_size=20)
-    created = 0
 
+    # --- LIGNE DE DEBUG AJOUTÉE ---
+    logger.info("Nombre d'articles candidats trouvés sur NewsAPI : %d", len(candidates))
+
+    if not candidates:
+        logger.info("Aucun article trouvé. Le travail est terminé pour cette fois.")
+        return
+
+    created = 0
     for art in candidates:
         title = art.get("title") or art.get("description") or ""
         if not title:
             continue
+
         sources = find_additional_sources(title, art.get("url"), max_sources=3)
         if len(sources) < 1:
             continue
+
         if len(sources) < 3:
             sources = (sources * 3)[:3]
 
@@ -33,7 +44,7 @@ def run_once():
         try:
             data = synthesize_neutral(title, sources)
             art_title = data.get("title", title)
-            body = data.get("body", f"<p>Contenu non généré pour {title}.</p>")
+            body = data.get("body", "")
             bullets = data.get("bullets", [])
             meta = data.get("meta", {"keywords": [], "description": title[:150]})
             path, html, slug = render_article("templates", art_title, body, sources, bullets=bullets, meta=meta)
