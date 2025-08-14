@@ -1,7 +1,4 @@
-# Fichier : aurore-ia/netlify.toml
-
 [build]
-  # On crée le dossier 'public' vide pour que Netlify ne déclenche pas d'erreur.
   command = "mkdir public"
   publish = "public"
 
