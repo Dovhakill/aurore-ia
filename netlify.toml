@@ -1,4 +1,4 @@
-# Fichier : aurore-ia/netlify.toml
+# Configuration finale pour le déploiement sur Netlify
 
 [build]
   command = "mkdir public"
@@ -10,7 +10,7 @@
 [build.environment]
   NODE_VERSION = "20"
   
-# La ligne la plus importante de toute l'infrastructure :
-# Elle active le service de "mémoire" (Blobs) pour ce site.
+# Cette section est la plus importante.
+# Elle active le service "Blobs" pour ce site.
 [[stores]]
   name = "aurore-memory"
