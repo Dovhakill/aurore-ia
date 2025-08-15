@@ -1,3 +1,5 @@
+# Fichier : aurore-ia/netlify.toml
+
 [build]
   command = "mkdir public"
   publish = "public"
@@ -7,3 +9,9 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  
+# --- AJOUT IMPORTANT ---
+# On déclare à Netlify qu'on veut utiliser le Blob Store
+# et on lui donne un nom.
+[[stores]]
+  name = "aurore-memory"
