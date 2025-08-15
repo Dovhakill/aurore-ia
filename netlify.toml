@@ -1,4 +1,4 @@
-# Configuration finale pour le déploiement sur Netlify
+# Configuration Netlify FINALE pour le projet aurore-ia
 
 [build]
   command = "mkdir public"
@@ -10,7 +10,6 @@
 [build.environment]
   NODE_VERSION = "20"
   
-# Cette section est la plus importante.
-# Elle active le service "Blobs" pour ce site.
+# La section la plus importante du projet, qui active la mémoire.
 [[stores]]
   name = "aurore-memory"
