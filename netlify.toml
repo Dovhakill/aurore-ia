@@ -10,8 +10,7 @@
 [build.environment]
   NODE_VERSION = "20"
   
-# --- AJOUT IMPORTANT ---
-# On déclare à Netlify qu'on veut utiliser le Blob Store
-# et on lui donne un nom.
+# La ligne la plus importante de toute l'infrastructure :
+# Elle active le service de "mémoire" (Blobs) pour ce site.
 [[stores]]
   name = "aurore-memory"
