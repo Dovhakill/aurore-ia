@@ -1,5 +1,4 @@
-# Configuration Netlify FINALE pour le projet aurore-ia
-
+# Configuration Netlify FINALE et CORRECTE pour aurore-ia
 [build]
   command = "mkdir public"
   publish = "public"
@@ -10,6 +9,6 @@
 [build.environment]
   NODE_VERSION = "20"
   
-# La section la plus importante du projet, qui active la mémoire.
+# La section la plus importante qui active la mémoire.
 [[stores]]
   name = "aurore-memory"
