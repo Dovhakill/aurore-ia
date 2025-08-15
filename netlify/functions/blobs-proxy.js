@@ -1,62 +1,53 @@
-const { getStore } = require("@netlify/blobs");
+// Fonction "blobs-proxy" finale et sécurisée
 
 exports.handler = async (event) => {
-  console.log("--- FONCTION BLOBS-PROXY INVOQUÉE ---");
-  
+  console.log(`[INFO] Fonction blobs-proxy invoquée avec la méthode : ${event.httpMethod}`);
+
+  // On importe les dépendances à l'intérieur pour isoler les erreurs
+  const { getStore } = require("@netlify/blobs");
+  const crypto = require("crypto");
+
   try {
     const secret = process.env.AURORE_BLOBS_TOKEN;
+    if (!secret) {
+        console.error("[ERREUR] La variable d'environnement AURORE_BLOBS_TOKEN est manquante sur Netlify.");
+        return { statusCode: 500, body: "Configuration error: Missing token" };
+    }
+    
+    const hash = crypto.createHash('sha256').update(secret).digest('hex');
+    console.log(`[DEBUG] Empreinte du token attendu sur Netlify : ${hash.substring(0, 10)}...`);
+
     const got = event.headers["x-aurore-token"];
-
-    console.log(`Méthode reçue: ${event.httpMethod}`);
-
-    if (!secret || got !== secret) {
-      console.error("ERREUR: Token invalide ou manquant.");
+    if (!got || got !== secret) {
+      console.warn("[ALERTE] Token invalide ou manquant dans la requête.");
       return { statusCode: 401, body: "Unauthorized" };
     }
-    console.log("Token validé avec succès.");
 
     const store = getStore("aurore-memory");
-    console.log("Magasin 'aurore-memory' récupéré.");
 
     if (event.httpMethod === "GET") {
       const key = event.queryStringParameters.key;
-      console.log(`Mode GET - Clé à vérifier : ${key}`);
-      if (!key) {
-        console.error("ERREUR: Clé manquante dans la requête GET.");
-        return { statusCode: 400, body: "Missing key" };
-      }
-
-      const val = await store.get(key);
-      if (!val) {
-        console.log(`Résultat GET: Clé '${key}' non trouvée.`);
-        return { statusCode: 404, body: "Not found" };
-      }
+      if (!key) return { statusCode: 400, body: "Missing key" };
       
-      console.log(`Résultat GET: Clé '${key}' trouvée.`);
-      return { statusCode: 200, body: val };
+      const val = await store.get(key);
+      return val
+        ? { statusCode: 200, body: val }
+        : { statusCode: 404, body: "Not found" };
     }
 
     if (event.httpMethod === "POST") {
-      console.log("Mode POST - Corps de la requête :", event.body);
       const body = JSON.parse(event.body);
       const { key, meta } = body || {};
-      
-      if (!key) {
-        console.error("ERREUR: Clé manquante dans la requête POST.");
-        return { statusCode: 400, body: "Missing key" };
-      }
-      
-      console.log(`Action POST: Sauvegarde de la clé '${key}'`);
+      if (!key) return { statusCode: 400, body: "Missing key" };
+
       await store.setJSON(key, meta || {});
-      console.log("Action POST: Sauvegarde réussie.");
-      
       return { statusCode: 201, body: "OK" };
     }
 
     return { statusCode: 405, body: "Method Not Allowed" };
 
   } catch (err) {
-    console.error("--- ERREUR FATALE DANS LA FONCTION ---", err);
+    console.error("[ERREUR FATALE]", err);
     return { statusCode: 500, body: `Internal Server Error: ${err.message}` };
   }
 };
