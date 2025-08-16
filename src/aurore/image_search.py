@@ -10,8 +10,8 @@ def find_unsplash_image(query: str):
     Cherche une image pertinente sur Unsplash et renvoie ses détails.
     """
     try:
-        # MODIFICATION FINALE : On ne passe que la clé d'accès, rien d'autre.
-        auth = Auth(Settings.UNSPLASH_ACCESS_KEY)
+        # L'ULTIME CORRECTION : On passe la clé, et "None" pour les 2 autres arguments qu'elle attend.
+        auth = Auth(Settings.UNSPLASH_ACCESS_KEY, None, None)
         
         unsplash = Api(auth)
         
