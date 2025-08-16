@@ -10,12 +10,11 @@ def find_unsplash_image(query: str):
     Cherche une image pertinente sur Unsplash et renvoie ses détails.
     """
     try:
-        # L'ULTIME CORRECTION : On passe la clé, et "None" pour les 2 autres arguments qu'elle attend.
         auth = Auth(Settings.UNSPLASH_ACCESS_KEY, None, None)
-        
         unsplash = Api(auth)
         
-        search_results = unsplash.search.photos(query, orientation="landscape", per_page=1)
+        # MODIFICATION : On enlève le paramètre 'orientation' pour une compatibilité maximale
+        search_results = unsplash.search.photos(query, per_page=1)
         
         if search_results and search_results.get("results"):
             photo = search_results["results"][0]
