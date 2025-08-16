@@ -1,30 +1,20 @@
-import time
 from github import Github, InputGitAuthor
+import time
 
 def open_pr(repo_fullname: str, token: str, path: str, html: str, author_name: str, author_email: str, title: str):
     """
-    Ouvre une Pull Request sur le dépôt cible avec le contenu de l'article.
+    Ouvre une Pull Request sur le dépôt cible et la fusionne automatiquement.
     """
     gh = Github(token)
     repo = gh.get_repo(repo_fullname)
     
-    # Nom de branche unique basé sur le temps
     branch_name = f"aurore/{int(time.time())}"
-    
-    # Récupère la branche de base (ex: "main" ou "master")
     base = repo.get_branch(repo.default_branch)
-    
-    # Crée la nouvelle branche à partir de la base
     repo.create_git_ref(ref=f"refs/heads/{branch_name}", sha=base.commit.sha)
 
-    # Message de commit
     commit_message = f"feat(aurore): Ajout article '{title}'"
-    
-    # MODIFICATION 1 : On crée un objet "Auteur" au bon format
     committer = InputGitAuthor(author_name, author_email)
 
-    # MODIFICATION 2 : On crée le fichier directement, sans vérifier s'il existe
-    # (car il est dans une nouvelle branche et n'existera jamais)
     repo.create_file(
         path=path, 
         message=commit_message, 
@@ -33,9 +23,8 @@ def open_pr(repo_fullname: str, token: str, path: str, html: str, author_name: s
         committer=committer
     )
 
-    # Crée la Pull Request
     pr_title = f"Proposition d'article : {title}"
-    pr_body = "Cet article a été généré automatiquement par Aurore."
+    pr_body = "Cet article a été généré automatiquement par Aurore et sera fusionné dans 30 secondes."
     
     pr = repo.create_pull(
         title=pr_title,
@@ -43,5 +32,19 @@ def open_pr(repo_fullname: str, token: str, path: str, html: str, author_name: s
         head=branch_name,
         base=repo.default_branch
     )
+    print(f"INFO: Pull Request créée avec succès : {pr.html_url}")
+    
+    # --- SECTION D'AUTOMATISATION AJOUTÉE ---
+    
+    # 1. Attendre 30 secondes
+    # On laisse un peu de temps aux vérifications automatiques (comme Netlify Preview) de se lancer.
+    print("INFO: Attente de 30 secondes avant la fusion automatique...")
+    time.sleep(30)
+    
+    # 2. Fusionner la Pull Request
+    pr.merge()
+    print("INFO: Pull Request fusionnée automatiquement avec succès !")
+    
+    # --- FIN DE LA SECTION D'AUTOMATISATION ---
     
     return pr.html_url
