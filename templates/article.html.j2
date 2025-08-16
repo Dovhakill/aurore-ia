@@ -6,45 +6,72 @@
   <meta name="description" content="{{ meta.description }}">
   <meta name="keywords" content="{{ meta.keywords | join(', ') }}">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <meta property="og:title" content="{{ title }}">
   <meta property="og:description" content="{{ meta.description }}">
   <meta property="og:type" content="article">
-  <meta property="og:url" content="https://l-horizon-libre.fr/articles/{{ slug }}.html">
+  <meta property="og:url" content="https://l-horizon-libre.fr/{{ slug }}.html">
+  {% if image and image.url %}<meta property="og:image" content="{{ image.url }}">{% endif %}
   <meta property="og:site_name" content="L’Horizon Libre">
+
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{ title }}">
   <meta name="twitter:description" content="{{ meta.description }}">
+  {% if image and image.url %}<meta name="twitter:image" content="{{ image.url }}">{% endif %}
+
+  <style>
+      body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+      h1 { color: #1a237e; }
+      h3 { color: #5c6bc0; border-bottom: 1px solid #eee; padding-bottom: 0.3rem; }
+      figure { margin: 2rem 0; }
+      figure img { width: 100%; height: auto; border-radius: 8px; }
+      figcaption { font-size: 0.8rem; color: #777; text-align: center; margin-top: 0.5rem; }
+      footer { margin-top: 2rem; font-size: 0.8rem; color: #777; }
+      a { color: #3949ab; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
-<main>
-  <article>
-    <header>
-      <h1>{{ title }}</h1>
-      <p class="dek">{{ dek }}</p>
-      <time datetime="{{ published_iso }}">{{ published_iso }}</time>
-    </header>
-    <section class="content">
-      {{ body | safe }}
-    </section>
-    {% if bullets %}
-    <section class="key-points">
-      <h3>Points clés</h3>
-      <ul>
-        {% for b in bullets %}
-        <li>{{ b }}</li>
-        {% endfor %}
-      </ul>
-    </section>
-    {% endif %}
-    <footer>
-      <h3>Sources</h3>
-      <ul>
-        {% for u in sources %}
-        <li><a href="{{ u }}?utm_source=aurore&utm_medium=article&utm_campaign=l_horizon_libre" target="_blank" rel="noopener noreferrer">{{ u }}</a></li>
-        {% endfor %}
-      </ul>
-    </footer>
-  </article>
-</main>
+  <main>
+    <article>
+      <header>
+        <h1>{{ title }}</h1>
+        <p class="dek">{{ dek }}</p>
+        <time datetime="{{ published_iso }}">{{ published_iso }}</time>
+      </header>
+      
+      {% if image and image.url %}
+      <figure>
+        <img src="{{ image.url }}" alt="Illustration pour l'article : {{ title }}">
+        <figcaption>
+          Photo par <a href="{{ image.author_url }}" target="_blank" rel="noopener noreferrer">{{ image.author_name }}</a> sur <a href="https://unsplash.com?utm_source=l_horizon_libre&utm_medium=referral" target="_blank" rel="noopener noreferrer">Unsplash</a>
+        </figcaption>
+      </figure>
+      {% endif %}
+      <section class="content">
+        {{ body | safe }}
+      </section>
+
+      {% if bullets %}
+      <section class="key-points">
+        <h3>Points clés</h3>
+        <ul>
+          {% for b in bullets %}
+          <li>{{ b }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      <footer>
+        <h3>Sources</h3>
+        <ul>
+          {% for u in sources %}
+          <li><a href="{{ u }}?utm_source=aurore&utm_medium=article&utm_campaign=l_horizon_libre" target="_blank" rel="noopener noreferrer">{{ u }}</a></li>
+          {% endfor %}
+        </ul>
+      </footer>
+    </article>
+  </main>
 </body>
 </html>
