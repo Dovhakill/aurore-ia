@@ -5,6 +5,7 @@ from .summarize import synthesize_neutral
 from .render import render_article
 from .github_pr import open_pr
 from .utils import topic_key
+from .image_search import find_unsplash_image # On importe notre nouvelle fonction
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -20,9 +21,8 @@ def run_once():
         logger.info("Aucun article trouvé. Le travail est terminé pour cette fois.")
         return
 
-    # On ne traite que le tout premier article de la liste
     first_article = candidates[0]
-    title = first_article.get("title") or first_article.get("description") or ""
+    title = first_article.get("title") or ""
 
     if not title:
         logger.info("Le premier article n'a pas de titre. On s'arrête.")
@@ -32,7 +32,6 @@ def run_once():
     
     sources = find_additional_sources(title, first_article.get("url"), max_sources=3)
     if len(sources) < 3:
-        # Duplique les sources si on n'en trouve pas 3, pour que le prompt de l'IA ait la bonne structure
         sources = (sources * 3)[:3]
 
     key = topic_key(title, sources)
@@ -44,10 +43,17 @@ def run_once():
     try:
         data = synthesize_neutral(title, sources)
         art_title = data.get("title", title)
+        
+        # On cherche une image après avoir le titre final de l'IA
+        image_details = find_unsplash_image(art_title)
+
         body = data.get("body", "")
         bullets = data.get("bullets", [])
-        meta = data.get("meta", {"keywords": [], "description": title[:150]})
-        path, html, slug = render_article("templates", art_title, body, sources, bullets=bullets, meta=meta)
+        meta = data.get("meta", {})
+        dek = data.get("dek", "")
+        
+        # On passe les détails de l'image au rendu
+        path, html, slug = render_article("templates", art_title, body, sources, bullets=bullets, meta=meta, dek=dek, image=image_details)
         
         pr_url = open_pr(
             repo_fullname=Settings.GH_SITE_REPO,
