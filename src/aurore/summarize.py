@@ -23,67 +23,63 @@ def fetch_text(url: str) -> str:
         return ""
 
 def synthesize_neutral(topic: str, sources: Sequence[str]) -> dict:
-    # MODIFICATION 2: On configure la clé API une seule fois
     genai.configure(api_key=Settings.GEMINI_API_KEY)
 
-    prompt = f"""
-Tu es un journaliste factuel expert en SEO qui écrit en français.
-Fusionne les informations des sources en un article neutre et clair.
+    # MODIFICATION : On construit le prompt dynamiquement
+    
+    # Partie 1 : Les instructions générales
+    prompt_instructions = f"""
+Tu es un journaliste factuel qui écrit en français.
+Fusionne les informations des {len(sources)} source(s) suivante(s) en un article neutre et clair.
 Répond EXCLUSIVEMENT en JSON valide.
 
-Le champ "body" doit contenir du HTML sémantique : utilise des paragraphes `<p>`, des listes `<ul><li>`, et des `<strong>` pour les termes importants. Ne jamais utiliser de balise `<h1>` ou `<h2>`.
-Le champ "dek" (chapeau) est obligatoire et doit faire entre 20 et 40 mots.
-Le champ "meta.description" doit être une phrase unique de 150-160 caractères maximum.
-Le champ "meta.keywords" doit contenir entre 3 et 5 mots-clés pertinents.
-
 Le format doit être :
-{{
-  "title": "Titre court et précis (50-70 caractères)",
-  "dek": "Chapeau introductif de 1-2 phrases, engageant et informatif.",
-  "body": "<p>HTML structuré de l'article...</p>",
+{{ 
+  "title": "Titre court et précis",
+  "dek": "Chapeau introductif de 1-2 phrases",
+  "body": "<p>HTML structuré de l'article</p>",
   "bullets": ["Point clé 1", "Point clé 2", "Point clé 3"],
   "meta": {{
-    "keywords": ["mot", "clé", "pertinent"],
-    "description": "Phrase unique et descriptive optimisée pour le SEO (150-160 caractères)."
+    "keywords": ["mot", "clé"],
+    "description": "Phrase descriptive optimisée SEO"
   }}
 }}
 
 Sujet : {topic}
-
 Sources :
-1. {sources[0]}
-2. {sources[1]}
-3. {sources[2]}
 """
+    # Partie 2 : La liste des URLs
+    source_list = "\n".join([f"{i}. {url}" for i, url in enumerate(sources, 1)])
+    
+    final_prompt = prompt_instructions + source_list
 
-    contents = [{"role": "user", "parts": [{"text": prompt}]}]
+    # On envoie d'abord les instructions et la liste des sources
+    contents = [{"role": "user", "parts": [{"text": final_prompt}]}]
+    
+    # Ensuite, on envoie le contenu de chaque source
     for idx, src in enumerate(sources, start=1):
         contents.append({
             "role": "user",
             "parts": [{"text": f"--- Contenu Source {idx} ({src}) ---\n{fetch_text(src)[:8000]}"}]
         })
-
+    
+    # ... (le reste de la fonction pour appeler Gemini ne change pas)
     generation_config = GenerationConfig(
         temperature=0.3,
         max_output_tokens=2048,
-        # On spécifie le type de réponse attendu comme JSON
         response_mime_type="application/json",
     )
-    
-    # MODIFICATION 3: On crée une instance du modèle et on génère le contenu
-    model = genai.GenerativeModel("gemini-1.5-flash-latest")
-    
+    model = genai.GenerativeModel("gemini-pro")
     resp = model.generate_content(
         contents=contents,
         generation_config=generation_config
     )
-
+    
     text = resp.text or "{}"
     try:
-        # La réponse de l'IA est déjà en JSON, plus besoin de json.loads sur le texte brut
         data = json.loads(text)
     except json.JSONDecodeError:
-        print(f"Erreur de décodage JSON. Réponse de l'IA:\n{text}")
+        logger.error("Erreur de décodage JSON. Réponse de l'IA:\n%s", text)
         return {
             "title": topic[:120], "dek": "", "body": "<p>Erreur de génération de contenu.</p>",
             "bullets": [], "meta": {"keywords": [], "description": topic[:150]}
