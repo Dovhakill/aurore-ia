@@ -1,5 +1,4 @@
 const { getStore } = require("@netlify/blobs");
-const crypto = require("crypto");
 
 exports.handler = async (event) => {
   try {
@@ -10,14 +9,11 @@ exports.handler = async (event) => {
       return { statusCode: 401, body: "Unauthorized" };
     }
 
-    // --- MODIFICATION IMPORTANTE ---
-    // On initialise la mémoire manuellement avec l'ID du site et le token
     const store = getStore({
       name: "aurore-memory",
       siteID: process.env.NETLIFY_SITE_ID,
       token: process.env.NETLIFY_API_TOKEN,
     });
-    // --- FIN DE LA MODIFICATION ---
 
     if (event.httpMethod === "GET") {
       const key = event.queryStringParameters.key;
@@ -36,9 +32,8 @@ exports.handler = async (event) => {
     }
 
     return { statusCode: 405, body: "Method Not Allowed" };
-
   } catch (err) {
-    console.error("[ERREUR FATALE]", err);
+    console.error("[ERREUR BLOBS-PROXY]", err);
     return { statusCode: 500, body: `Internal Server Error: ${err.message}` };
   }
 };
