@@ -30,6 +30,51 @@ def run_once():
 
     logger.info("Tentative de traitement pour l'article : %s", title)
     
+    # On cherche toujours jusqu'à 3 sources
+    sources = find_additional_sources(title, first_article.get("url"), max_sources=3)
+    
+    # MODIFICATION : On enlève la duplication et on vérifie juste qu'on a au moins une source
+    if not sources:
+        logger.warning("Aucune source trouvée pour l'article '%s'. Article ignoré.", title)
+        return
+
+    key = topic_key(title, sources)
+    
+    if seen(key):
+        logger.info("Déjà vu (skipping): %s", title)
+        return
+
+    try:
+        # On passe à Gemini la liste des sources, quel que soit leur nombre (1, 2 ou 3)
+        data = synthesize_neutral(title, sources)
+        
+        art_title = data.get("title", title)
+        image_details = find_unsplash_image(art_title)
+        body = data.get("body", "")
+        bullets = data.get("bullets", [])
+        meta = data.get("meta", {})
+        dek = data.get("dek", "")
+        
+        path, html, slug = render_article("templates", art_title, body, sources, bullets=bullets, meta=meta, dek=dek, image=image_details)
+        
+        pr_url = open_pr(
+            repo_fullname=Settings.GH_SITE_REPO,
+            token=Settings.GH_TOKEN,
+            path=path,
+            html=html,
+            author_name=Settings.GH_AUTHOR_NAME,
+            author_email=Settings.GH_AUTHOR_EMAIL,
+            title=art_title
+        )
+        
+        mark(key, {"title": art_title, "pr": pr_url, "sources": sources})
+        logger.info("SUCCÈS ! PR créée : %s", pr_url)
+        
+    except Exception as e:
+        logger.exception("Échec du traitement de l'article %s: %s", title, e)
+
+    logger.info("Traitement du premier article terminé. Arrêt du script.")
+    
     sources = find_additional_sources(title, first_article.get("url"), max_sources=3)
     if len(sources) < 3:
         sources = (sources * 3)[:3]
