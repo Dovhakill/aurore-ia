@@ -69,7 +69,7 @@ Sources :
         max_output_tokens=2048,
         response_mime_type="application/json",
     )
-    model = genai.GenerativeModel("gemini-pro")
+    model = genai.GenerativeModel("gemini-1.5-flash")
     resp = model.generate_content(
         contents=contents,
         generation_config=generation_config
