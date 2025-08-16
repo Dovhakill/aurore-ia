@@ -1,5 +1,5 @@
-# MODIFICATION 1 : On importe la classe 'Api' depuis 'unsplash.api'
 from unsplash.api import Api
+from unsplash.auth import Auth  # MODIFICATION 1 : On importe le module d'authentification
 from .config import Settings
 import logging
 
@@ -10,8 +10,11 @@ def find_unsplash_image(query: str):
     Cherche une image pertinente sur Unsplash et renvoie ses détails.
     """
     try:
-        # MODIFICATION 2 : On utilise 'Api' au lieu de 'Unsplash'
-        unsplash = Api(access_key=Settings.UNSPLASH_ACCESS_KEY)
+        # MODIFICATION 2 : On crée un objet d'authentification d'abord
+        auth = Auth(access_key=Settings.UNSPLASH_ACCESS_KEY, secret_key=None, redirect_uri=None)
+        
+        # MODIFICATION 3 : On passe cet objet à l'API
+        unsplash = Api(auth=auth)
         
         search_results = unsplash.search.photos(query, orientation="landscape", per_page=1)
         
