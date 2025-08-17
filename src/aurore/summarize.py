@@ -25,23 +25,22 @@ def fetch_text(url: str) -> str:
 def synthesize_neutral(topic: str, sources: Sequence[str]) -> dict:
     genai.configure(api_key=Settings.GEMINI_API_KEY)
 
-    # MODIFICATION : On construit le prompt dynamiquement
-    
-    # Partie 1 : Les instructions générales
-    prompt_instructions = f"""
-Tu es un journaliste factuel qui écrit en français.
-Fusionne les informations des {len(sources)} source(s) suivante(s) en un article neutre et clair.
+   prompt_instructions = f"""
+Tu es un journaliste d'investigation pour le média "L'Horizon Libre". Ton style est neutre, factuel et approfondi.
+Fusionne les informations des {len(sources)} source(s) suivante(s) en un article de presse complet (environ 400 mots).
+Structure l'article avec une introduction claire qui présente le sujet, plusieurs paragraphes de développement qui explorent les différents angles et contextes, et une brève conclusion.
+Utilise des balises `<strong>` pour mettre en évidence les noms, les lieux ou les chiffres importants.
 Répond EXCLUSIVEMENT en JSON valide.
 
 Le format doit être :
 {{ 
-  "title": "Titre court et précis",
-  "dek": "Chapeau introductif de 1-2 phrases",
-  "body": "<p>HTML structuré de l'article</p>",
-  "bullets": ["Point clé 1", "Point clé 2", "Point clé 3"],
+  "title": "Titre journalistique, percutant et informatif (10-15 mots)",
+  "dek": "Chapeau introductif de 2-3 phrases qui résume l'essentiel (Qui, Quoi, Où, Quand, Pourquoi).",
+  "body": "<p>Introduction...</p><p>Développement...</p><p>Développement supplémentaire...</p><p>Conclusion...</p>",
+  "bullets": ["Point clé factuel 1", "Point clé factuel 2", "Point clé factuel 3"],
   "meta": {{
-    "keywords": ["mot", "clé"],
-    "description": "Phrase descriptive optimisée SEO"
+    "keywords": ["journalisme", "analyse", "enquête"],
+    "description": "Phrase unique de 150-160 caractères pour le SEO, résumant l'article."
   }}
 }}
 
