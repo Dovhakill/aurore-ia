@@ -15,6 +15,8 @@ def open_pr(repo_fullname: str, token: str, path: str, html: str, author_name: s
     commit_message = f"feat(aurore): Ajout article '{title}'"
     committer = InputGitAuthor(author_name, author_email)
 
+    # On crée le fichier directement. Pas besoin de vérifier son existence
+    # car la branche est nouvelle.
     repo.create_file(
         path=path, 
         message=commit_message, 
@@ -34,17 +36,10 @@ def open_pr(repo_fullname: str, token: str, path: str, html: str, author_name: s
     )
     print(f"INFO: Pull Request créée avec succès : {pr.html_url}")
     
-    # --- SECTION D'AUTOMATISATION AJOUTÉE ---
-    
-    # 1. Attendre 30 secondes
-    # On laisse un peu de temps aux vérifications automatiques (comme Netlify Preview) de se lancer.
     print("INFO: Attente de 30 secondes avant la fusion automatique...")
     time.sleep(30)
     
-    # 2. Fusionner la Pull Request
     pr.merge()
     print("INFO: Pull Request fusionnée automatiquement avec succès !")
-    
-    # --- FIN DE LA SECTION D'AUTOMATISATION ---
     
     return pr.html_url
