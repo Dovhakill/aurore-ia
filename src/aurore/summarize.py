@@ -15,10 +15,8 @@ def fetch_text(url: str) -> str:
         r = requests.get(url, headers={"User-Agent": Settings.USER_AGENT}, timeout=30)
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
-        # Enlève les éléments inutiles (scripts, styles, etc.)
         for tag in soup(["script", "style", "noscript", "header", "footer", "nav"]):
             tag.decompose()
-        # Concatène les paragraphes de texte en nettoyant les espaces superflus
         text = " ".join(s.strip() for s in soup.get_text(" ").split())
         return text
     except Exception as e:
@@ -26,12 +24,13 @@ def fetch_text(url: str) -> str:
         return ""
 
 def synthesize_neutral(topic: str, sources: Sequence[str]) -> dict:
+    """Génère une synthèse d'article neutre et factuelle en utilisant l'API Gemini."""
     genai.configure(api_key=Settings.GEMINI_API_KEY)
 
     prompt_instructions = f"""
 Tu es un journaliste d'investigation pour le média "L'Horizon Libre". Ton style est neutre, factuel et approfondi.
 Fusionne les informations des {len(sources)} source(s) suivante(s) en un article de presse complet (environ 400 mots).
-Structure l'article avec une introduction claire, plusieurs paragraphes de développement, et une brève conclusion.
+Structure l'article avec une introduction claire, plusieurs paragraphes de développement qui explorent les différents angles et contextes, et une brève conclusion.
 Répond EXCLUSIVEMENT en JSON valide.
 
 Le format doit être :
@@ -50,7 +49,6 @@ Le format doit être :
 Sujet : {topic}
 Sources :
 """
-    # ... (le reste de la fonction ne change pas)
 
     source_list = "\n".join([f"{i}. {url}" for i, url in enumerate(sources, 1)])
     final_prompt = prompt_instructions + source_list
@@ -58,7 +56,6 @@ Sources :
     contents = [{"role": "user", "parts": [{"text": final_prompt}]}]
     
     for idx, src in enumerate(sources, start=1):
-        # On limite la quantité de texte par source pour ne pas surcharger le prompt
         source_content = fetch_text(src)[:8000]
         contents.append({
             "role": "user",
@@ -66,8 +63,8 @@ Sources :
         })
 
     generation_config = GenerationConfig(
-        temperature=0.4, # Un peu plus de créativité dans la reformulation
-        max_output_tokens=4096, # On augmente la limite pour des articles plus longs
+        temperature=0.4,
+        max_output_tokens=4096,
         response_mime_type="application/json",
     )
     
@@ -83,9 +80,8 @@ Sources :
         data = json.loads(text)
     except json.JSONDecodeError:
         logger.error("Erreur de décodage JSON. Réponse de l'IA:\n%s", text)
-        # En cas d'erreur, on fournit une structure de base pour éviter de planter
         return {
-            "title": topic[:120], "dek": "", "body": "<p>Erreur de génération de contenu.</p>",
+            "title": topic[:120], "dek": "", "body": "<p>Erreur de génération.</p>",
             "category": "International", "bullets": [], 
             "meta": {"keywords": [], "description": topic[:150]}
         }
