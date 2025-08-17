@@ -56,4 +56,12 @@
       </footer>
     </article>
 </div>
-{% endblock %}
+{% extends "base.html.j2" %}
+{% block title %}{{ title }} | L’Horizon Libre{% endblock %}
+{% block meta %}
+  <meta name="description" content="{{ meta.description }}">
+  <meta name="category" content="{{ category | lower }}">
+  <meta name="keywords" content="{{ meta.keywords | join(', ') }}">
+  {% endblock %}
+{% block content %}
+  {% endblock %}
