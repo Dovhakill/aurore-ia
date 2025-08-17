@@ -18,30 +18,30 @@
 {% endblock %}
 
 {% block content %}
-<article>
-  <header>
-    <h1>{{ title }}</h1>
-    <p class="dek">{{ dek }}</p>
-    <time datetime="{{ published_iso }}">{{ published_iso }}</time>
+<article class="prose lg:prose-xl mx-auto">
+  <header class="mb-8 text-center">
+    <h1 class="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">{{ title }}</h1>
+    <p class="text-lg text-gray-600 mt-2">{{ dek }}</p>
+    <time class="text-sm text-gray-500 mt-4 block" datetime="{{ published_iso }}">{{ published_human }}</time>
   </header>
   
   {% if image and image.url %}
-  <figure>
-    <img src="{{ image.url }}" alt="Illustration pour l'article : {{ title }}">
-    <figcaption>
-      Photo par <a href="{{ image.author_url }}" target="_blank" rel="noopener noreferrer">{{ image.author_name }}</a> sur <a href="https://unsplash.com?utm_source=l_horizon_libre&utm_medium=referral" target="_blank" rel="noopener noreferrer">Unsplash</a>
+  <figure class="my-8">
+    <img src="{{ image.url }}" alt="Illustration pour l'article : {{ title }}" class="rounded-lg shadow-lg w-full">
+    <figcaption class="text-xs text-gray-500 text-center mt-2">
+      Photo par <a href="{{ image.author_url }}" target="_blank" rel="noopener noreferrer" class="hover:underline">{{ image.author_name }}</a> sur <a href="https://unsplash.com?utm_source=l_horizon_libre&utm_medium=referral" target="_blank" rel="noopener noreferrer" class="hover:underline">Unsplash</a>
     </figcaption>
   </figure>
   {% endif %}
 
-  <section class="content">
+  <section class="content mt-8">
     {{ body | safe }}
   </section>
 
   {% if bullets %}
-  <section class="key-points">
-    <h3>Points clés</h3>
-    <ul>
+  <section class="key-points mt-12 p-6 bg-gray-100 rounded-lg">
+    <h3 class="text-2xl font-bold mb-4">Points clés</h3>
+    <ul class="list-disc list-inside space-y-2">
       {% for b in bullets %}
       <li>{{ b }}</li>
       {% endfor %}
@@ -49,11 +49,11 @@
   </section>
   {% endif %}
 
-  <footer>
-    <h3>Sources</h3>
-    <ul>
+  <footer class="mt-12 border-t pt-8">
+    <h3 class="text-2xl font-bold mb-4">Sources</h3>
+    <ul class="list-disc list-inside space-y-2">
       {% for u in sources %}
-      <li><a href="{{ u }}?utm_source=aurore" target="_blank" rel="noopener noreferrer">{{ u }}</a></li>
+      <li><a href="{{ u }}?utm_source=aurore" target="_blank" rel="noopener noreferrer" class="text-blue-700 hover:underline break-all">{{ u }}</a></li>
       {% endfor %}
     </ul>
   </footer>
