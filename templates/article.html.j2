@@ -10,7 +10,54 @@
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://l-horizon-libre.fr/{{ slug }}.html">
   {% if image and image.url %}<meta property="og:image" content="{{ image.url }}">{% endif %}
-  <meta property="og:site_name" content="L’Horizon Libre">
+  <meta property="og:site_name" content="L’Horizon Libre">{% extends "base.html.j2" %}
+{% block title %}{{ title }} | L’Horizon Libre{% endblock %}
+{% block meta %}
+  {% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <article>
+      <header class="mb-8 text-center">
+        <h1 class="text-3xl md:text-5xl font-bold text-gray-900 leading-tight">{{ title }}</h1>
+        <p class="text-lg text-gray-600 mt-4">{{ dek }}</p>
+        <time class="text-sm text-gray-500 mt-4 block" datetime="{{ published_iso }}">{{ published_human }}</time>
+      </header>
+      
+      {% if image and image.url %}
+      <figure class="my-8">
+        <img src="{{ image.url }}" alt="Illustration pour l'article : {{ title }}" class="article-featured-image shadow-lg">
+        <figcaption class="text-xs text-gray-500 text-center mt-2">
+          Photo par <a href="{{ image.author_url }}" target="_blank" rel="noopener noreferrer">{{ image.author_name }}</a> sur <a href="https://unsplash.com?utm_source=l_horizon_libre&utm_medium=referral">Unsplash</a>
+        </figcaption>
+      </figure>
+      {% endif %}
+
+      <section class="prose prose-lg max-w-none">
+        {{ body | safe }}
+      </section>
+
+      {% if bullets %}
+      <section class="key-points mt-12 p-6 bg-gray-100 rounded-lg">
+        <h3 class="text-2xl font-bold mb-4">Points clés</h3>
+        <ul class="list-disc list-inside space-y-2">
+          {% for b in bullets %}
+          <li>{{ b }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      <footer class="mt-12 border-t pt-8">
+        <h3 class="text-2xl font-bold mb-4">Sources</h3>
+        <ul class="list-disc list-inside space-y-2">
+          {% for u in sources %}
+          <li><a href="{{ u }}?utm_source=aurore" class="text-blue-700 hover:underline break-all">{{ u }}</a></li>
+          {% endfor %}
+        </ul>
+      </footer>
+    </article>
+</div>
+{% endblock %}
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{ title }}">
   <meta name="twitter:description" content="{{ meta.description }}">
