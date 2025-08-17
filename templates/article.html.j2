@@ -8,12 +8,11 @@
   <meta property="og:title" content="{{ title }}">
   <meta property="og:description" content="{{ meta.description }}">
   <meta property="og:type" content="article">
-  <meta property="og:url" content="https://l-horizon-libre.fr/{{ slug }}.html">
+  <meta property="og:url" content="https://horizon-libre.net/article/{{ slug }}.html">
   {% if image and image.url %}<meta property="og:image" content="{{ image.url }}">{% endif %}
-  <meta property="og:site_name" content="L’Horizon Libre">{% extends "base.html.j2" %}
-{% block title %}{{ title }} | L’Horizon Libre{% endblock %}
-{% block meta %}
-  {% endblock %}
+  <meta property="og:site_name" content="L’Horizon Libre">
+{% endblock %}
+
 {% block content %}
 <div class="max-w-4xl mx-auto">
     <article>
@@ -25,7 +24,7 @@
       
       {% if image and image.url %}
       <figure class="my-8">
-        <img src="{{ image.url }}" alt="Illustration pour l'article : {{ title }}" class="article-featured-image shadow-lg">
+        <img src="{{ image.url }}" alt="Illustration pour l'article : {{ title }}" class="rounded-lg shadow-lg w-full">
         <figcaption class="text-xs text-gray-500 text-center mt-2">
           Photo par <a href="{{ image.author_url }}" target="_blank" rel="noopener noreferrer">{{ image.author_name }}</a> sur <a href="https://unsplash.com?utm_source=l_horizon_libre&utm_medium=referral">Unsplash</a>
         </figcaption>
@@ -57,53 +56,4 @@
       </footer>
     </article>
 </div>
-{% endblock %}
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="{{ title }}">
-  <meta name="twitter:description" content="{{ meta.description }}">
-  {% if image and image.url %}<meta name="twitter:image" content="{{ image.url }}">{% endif %}
-{% endblock %}
-
-{% block content %}
-<article class="prose lg:prose-xl mx-auto">
-  <header class="mb-8 text-center">
-    <h1 class="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">{{ title }}</h1>
-    <p class="text-lg text-gray-600 mt-2">{{ dek }}</p>
-    <time datetime="{{ published_iso }}">{{ published_iso }}</time>
-<time datetime="{{ published_iso }}">{{ published_human }}</time>
-  </header>
-  
-  {% if image and image.url %}
-  <figure class="my-8">
-    <img src="{{ image.url }}" alt="Illustration pour l'article : {{ title }}" class="rounded-lg shadow-lg w-full">
-    <figcaption class="text-xs text-gray-500 text-center mt-2">
-      Photo par <a href="{{ image.author_url }}" target="_blank" rel="noopener noreferrer" class="hover:underline">{{ image.author_name }}</a> sur <a href="https://unsplash.com?utm_source=l_horizon_libre&utm_medium=referral" target="_blank" rel="noopener noreferrer" class="hover:underline">Unsplash</a>
-    </figcaption>
-  </figure>
-  {% endif %}
-
-  <section class="content mt-8">
-    {{ body | safe }}
-  </section>
-
-  {% if bullets %}
-  <section class="key-points mt-12 p-6 bg-gray-100 rounded-lg">
-    <h3 class="text-2xl font-bold mb-4">Points clés</h3>
-    <ul class="list-disc list-inside space-y-2">
-      {% for b in bullets %}
-      <li>{{ b }}</li>
-      {% endfor %}
-    </ul>
-  </section>
-  {% endif %}
-
-  <footer class="mt-12 border-t pt-8">
-    <h3 class="text-2xl font-bold mb-4">Sources</h3>
-    <ul class="list-disc list-inside space-y-2">
-      {% for u in sources %}
-      <li><a href="{{ u }}?utm_source=aurore" target="_blank" rel="noopener noreferrer" class="text-blue-700 hover:underline break-all">{{ u }}</a></li>
-      {% endfor %}
-    </ul>
-  </footer>
-</article>
 {% endblock %}
