@@ -43,8 +43,22 @@ def run_once():
     if seen(key):
         logger.info("Déjà vu (skipping): %s", title)
         return
-
+# Dans la fonction run_once, dans le bloc try:
     try:
+        data = synthesize_neutral(title, sources)
+        art_title = data.get("title", title)
+        category = data.get("category", "International") # On récupère la catégorie
+        
+        image_details = find_unsplash_image(art_title)
+        body = data.get("body", "")
+        bullets = data.get("bullets", [])
+        meta = data.get("meta", {})
+        dek = data.get("dek", "")
+        
+        # On passe la catégorie au rendu
+        path, html, slug = render_article("templates", art_title, body, sources, category, bullets=bullets, meta=meta, dek=dek, image=image_details)
+        
+        # ... (le reste ne change pas) ...
         # On passe à Gemini la liste des sources, quel que soit leur nombre (1, 2 ou 3)
         data = synthesize_neutral(title, sources)
         
