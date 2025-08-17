@@ -26,32 +26,31 @@ def fetch_text(url: str) -> str:
         return ""
 
 def synthesize_neutral(topic: str, sources: Sequence[str]) -> dict:
-    """Génère une synthèse d'article neutre et factuelle en utilisant l'API Gemini."""
     genai.configure(api_key=Settings.GEMINI_API_KEY)
 
     prompt_instructions = f"""
 Tu es un journaliste d'investigation pour le média "L'Horizon Libre". Ton style est neutre, factuel et approfondi.
 Fusionne les informations des {len(sources)} source(s) suivante(s) en un article de presse complet (environ 400 mots).
-Structure l'article avec une introduction claire qui présente le sujet, plusieurs paragraphes de développement qui explorent les différents angles et contextes, et une brève conclusion.
-Utilise des balises `<strong>` pour mettre en évidence les noms, les lieux ou les chiffres importants.
+Structure l'article avec une introduction claire, plusieurs paragraphes de développement, et une brève conclusion.
 Répond EXCLUSIVEMENT en JSON valide.
 
 Le format doit être :
 {{ 
   "title": "Titre journalistique, percutant et informatif (10-15 mots)",
-  "dek": "Chapeau introductif de 2-3 phrases qui résume l'essentiel (Qui, Quoi, Où, Quand, Pourquoi).",
-  "body": "<p>Introduction...</p><p>Développement...</p><p>Développement supplémentaire...</p><p>Conclusion...</p>",
+  "dek": "Chapeau introductif de 2-3 phrases qui résume l'essentiel.",
+  "body": "<p>Introduction...</p><p>Développement...</p><p>Conclusion...</p>",
   "category": "Choisir une seule catégorie parmi : Politique, Culture, Technologie, International",
   "bullets": ["Point clé factuel 1", "Point clé factuel 2", "Point clé factuel 3"],
   "meta": {{
     "keywords": ["journalisme", "analyse", "enquête"],
-    "description": "Phrase unique de 150-160 caractères pour le SEO, résumant l'article."
+    "description": "Phrase unique de 150-160 caractères pour le SEO."
   }}
 }}
 
 Sujet : {topic}
 Sources :
 """
+    # ... (le reste de la fonction ne change pas)
 
     source_list = "\n".join([f"{i}. {url}" for i, url in enumerate(sources, 1)])
     final_prompt = prompt_instructions + source_list
