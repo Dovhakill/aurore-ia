@@ -4,29 +4,26 @@
 
 {% block meta %}
   <meta name="description" content="{{ meta.description }}">
+  <meta name="category" content="{{ category | lower }}">
   <meta name="keywords" content="{{ meta.keywords | join(', ') }}">
   <meta property="og:title" content="{{ title }}">
   <meta property="og:description" content="{{ meta.description }}">
-  <meta property="og:type" content="article">
-  <meta property="og:url" content="https://horizon-libre.net/article/{{ slug }}.html">
-  {% if image and image.url %}<meta property="og:image" content="{{ image.url }}">{% endif %}
-  <meta property="og:site_name" content="L’Horizon Libre">
 {% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto">
     <article>
       <header class="mb-8 text-center">
-        <h1 class="text-3xl md:text-5xl font-bold text-gray-900 leading-tight">{{ title }}</h1>
+        <h1 class="text-3xl md:text-5xl font-bold">{{ title }}</h1>
         <p class="text-lg text-gray-600 mt-4">{{ dek }}</p>
         <time class="text-sm text-gray-500 mt-4 block" datetime="{{ published_iso }}">{{ published_human }}</time>
       </header>
       
       {% if image and image.url %}
       <figure class="my-8">
-        <img src="{{ image.url }}" alt="Illustration pour l'article : {{ title }}" class="rounded-lg shadow-lg w-full">
+        <img src="{{ image.url }}" alt="{{ title }}" class="article-featured-image shadow-lg">
         <figcaption class="text-xs text-gray-500 text-center mt-2">
-          Photo par <a href="{{ image.author_url }}" target="_blank" rel="noopener noreferrer">{{ image.author_name }}</a> sur <a href="https://unsplash.com?utm_source=l_horizon_libre&utm_medium=referral">Unsplash</a>
+          Photo par <a href="{{ image.author_url }}">{{ image.author_name }}</a> sur <a href="https://unsplash.com">Unsplash</a>
         </figcaption>
       </figure>
       {% endif %}
@@ -45,23 +42,6 @@
         </ul>
       </section>
       {% endif %}
-
-      <footer class="mt-12 border-t pt-8">
-        <h3 class="text-2xl font-bold mb-4">Sources</h3>
-        <ul class="list-disc list-inside space-y-2">
-          {% for u in sources %}
-          <li><a href="{{ u }}?utm_source=aurore" class="text-blue-700 hover:underline break-all">{{ u }}</a></li>
-          {% endfor %}
-        </ul>
-      </footer>
     </article>
 </div>
-{% extends "base.html.j2" %}
-{% block title %}{{ title }} | L’Horizon Libre{% endblock %}
-{% block meta %}
-  <meta name="description" content="{{ meta.description }}">
-  <meta name="category" content="{{ category | lower }}">
-  <meta name="keywords" content="{{ meta.keywords | join(', ') }}">
-  {% endblock %}
-{% block content %}
-  {% endblock %}
+{% endblock %}
