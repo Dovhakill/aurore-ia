@@ -1,14 +1,13 @@
-# Configuration Netlify FINALE pour aurore-ia
+# Configuration Netlify pour le site horizon-libre-site
+
 [build]
-  command = "mkdir public"
+  # 1. Installe les dépendances Python
+  # 2. Exécute notre script qui génère tout le site
+  command = "pip install -r requirements.txt && python build.py"
+  
+  # Le dossier final que Netlify doit publier (créé par build.py)
   publish = "public"
 
-[functions]
-  directory = "netlify/functions"
-
 [build.environment]
-  NODE_VERSION = "20"
-
-# Active la mémoire "aurore-memory"
-[[stores]]
-  name = "aurore-memory"
+  # On dit à Netlify d'utiliser une version de Python
+  PYTHON_VERSION = "3.11"
