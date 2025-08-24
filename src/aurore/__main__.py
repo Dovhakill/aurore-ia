@@ -1,6 +1,7 @@
 import argparse
 import os
 import json
+import datetime
 from dotenv import load_dotenv
 
 from . import news_fetch
@@ -9,7 +10,7 @@ from . import github_pr
 from . import dedup
 
 def load_app_config(config_name):
-    """Charge la configuration spécifiée (libre ou tech) depuis config.json."""
+    # ... (cette fonction ne change pas)
     try:
         with open('config.json', 'r', encoding='utf-8') as f:
             configs = json.load(f)
@@ -17,11 +18,8 @@ def load_app_config(config_name):
             raise ValueError(f"Configuration '{config_name}' non trouvée dans config.json")
         print(f"Configuration '{config_name}' chargée avec succès.")
         return configs[config_name]
-    except FileNotFoundError:
-        print("Erreur : Le fichier 'config.json' est introuvable.")
-        exit(1)
-    except json.JSONDecodeError:
-        print("Erreur : Le fichier 'config.json' est mal formaté.")
+    except Exception as e:
+        print(f"Erreur de chargement de la config : {e}")
         exit(1)
 
 def main():
@@ -57,20 +55,22 @@ def main():
         print("Échec de la génération du résumé. Arrêt.")
         return
 
-    pr_url = github_pr.create_github_pr(
+    # AJUSTEMENT : On récupère le message de succès (URL de PR ou message de publication directe)
+    result_message = github_pr.create_github_pr(
         title=title,
         summary=summary_markdown,
         image_url=article_to_process.get('urlToImage'),
         config=CONFIG
     )
 
-    if pr_url:
+    if result_message:
         print(f"Mise à jour de la base des doublons avec l'URL : {article_to_process['url']}")
         processed_urls_set.add(article_to_process['url'])
         dedup.save_processed_urls(processed_urls_set, CONFIG)
+        # On imprime le message de résultat final
+        print(f"Résultat final : {result_message}")
     
     print("--- Fin du cycle d'Aurore ---")
 
 if __name__ == "__main__":
-    import datetime
     main()
