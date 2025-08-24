@@ -2,8 +2,6 @@ import os
 from gnews import GNews
 
 def get_news_from_api(config):
-    """Récupère les nouvelles en utilisant GNews en fonction de la configuration."""
-    # CORRECTION : On utilise la clé 'gnews_query' synchronisée avec config.json
     query = config['gnews_query'] 
     print(f"Récupération des articles depuis GNews pour la query : \"{query}\"")
     
