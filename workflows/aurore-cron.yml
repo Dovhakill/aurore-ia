@@ -9,9 +9,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false # Ensures one config failing doesn't stop the other
+      fail-fast: false
       matrix:
-        config: [libre, tech] # This creates two parallel jobs
+        config: [libre, tech]
 
     steps:
       - name: Checkout repository
@@ -28,7 +28,6 @@ jobs:
 
       - name: Run Aurore Bot for ${{ matrix.config }}
         env:
-          # Pass GitHub secrets to the script's environment
           NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
