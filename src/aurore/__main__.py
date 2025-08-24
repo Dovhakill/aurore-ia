@@ -10,7 +10,6 @@ from . import github_pr
 from . import dedup
 
 def load_app_config(config_name):
-    # ... (cette fonction ne change pas)
     try:
         with open('config.json', 'r', encoding='utf-8') as f:
             configs = json.load(f)
@@ -23,7 +22,6 @@ def load_app_config(config_name):
         exit(1)
 
 def main():
-    """Fonction principale orchestrant la génération d'un article."""
     print(f"--- Lancement d'Aurore ({datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}) ---")
     
     parser = argparse.ArgumentParser(description="Génère un article pour Horizon.")
@@ -55,7 +53,6 @@ def main():
         print("Échec de la génération du résumé. Arrêt.")
         return
 
-    # AJUSTEMENT : On récupère le message de succès (URL de PR ou message de publication directe)
     result_message = github_pr.create_github_pr(
         title=title,
         summary=summary_markdown,
@@ -64,10 +61,8 @@ def main():
     )
 
     if result_message:
-        print(f"Mise à jour de la base des doublons avec l'URL : {article_to_process['url']}")
         processed_urls_set.add(article_to_process['url'])
         dedup.save_processed_urls(processed_urls_set, CONFIG)
-        # On imprime le message de résultat final
         print(f"Résultat final : {result_message}")
     
     print("--- Fin du cycle d'Aurore ---")
