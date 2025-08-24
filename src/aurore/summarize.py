@@ -3,7 +3,6 @@ import re
 import google.generativeai as genai
 
 def parse_gemini_response(response_text):
-    """Extrait le titre et le résumé en utilisant des balises spécifiques."""
     try:
         title_match = re.search(r'<TITRE>(.*?)</TITRE>', response_text, re.DOTALL)
         summary_match = re.search(r'<RESUME>(.*?)</RESUME>', response_text, re.DOTALL)
@@ -20,7 +19,6 @@ def parse_gemini_response(response_text):
         return None, None
 
 def summarize_article(article_content, config):
-    """Génère un résumé de l'article en utilisant le prompt configuré."""
     if not article_content:
         print("Le contenu de l'article est vide, impossible de résumer.")
         return None, None
@@ -31,7 +29,6 @@ def summarize_article(article_content, config):
         genai.configure(api_key=gemini_api_key)
         
         model = genai.GenerativeModel('gemini-1.5-flash')
-
         prompt = config['gemini_prompt'] + f"\n\nARTICLE À ANALYSER:\n{article_content}"
         
         response = model.generate_content(prompt)
