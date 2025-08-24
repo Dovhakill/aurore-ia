@@ -1,0 +1,16 @@
+{
+  "libre": {
+    "news_api_query": "politique OR social OR société OR élections OR gouvernement NOT sport NOT people",
+    "news_api_sources": "le-monde,les-echos,liberation,france-24",
+    "site_repo_name": "Dovhakill/horizon-libre-site",
+    "gemini_prompt": "Tu es un journaliste politique pour 'Horizon Libre'. Ton ton est neutre et factuel. Produis une synthèse de 400 mots sur l'enjeu social ou politique suivant. Explique le contexte, les acteurs impliqués et les conséquences potentielles. Ta réponse doit commencer directement par un titre percutant de 10 mots maximum, suivi d'un saut de ligne, puis du résumé. Termine par un paragraphe de conclusion commençant par 'Ce qu'il faut retenir :'.",
+    "blob_store_key": "libre_processed_urls"
+  },
+  "tech": {
+    "news_api_query": "IA OR \"intelligence artificielle\" OR tech OR web3 OR cybersécurité OR startup OR crypto NOT 'jeux vidéo'",
+    "news_api_sources": "techcrunch,the-verge,wired,hacker-news,les-numeriques",
+    "site_repo_name": "Dovhakill/horizon-tech-site",
+    "gemini_prompt": "Tu es un analyste technologique pour 'Horizon Tech'. Ton ton est expert mais accessible. Produis une analyse pointue de 400 mots sur l'innovation ou la nouvelle suivante. Explique la technologie sous-jacente, son impact sur le marché et pour les utilisateurs. Ta réponse doit commencer directement par un titre percutant de 10 mots maximum, suivi d'un saut de ligne, puis de l'analyse. Termine par un paragraphe de conclusion commençant par 'Pourquoi c'est important :'.",
+    "blob_store_key": "tech_processed_urls"
+  }
+}
