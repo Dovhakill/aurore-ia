@@ -1,45 +1,66 @@
-from github import Github, InputGitAuthor
-import time
+import os
+import datetime
+from jinja2 import Environment, FileSystemLoader
+from github import Github, InputGitTreeElement
 
-def open_pr(repo_fullname: str, token: str, path: str, html: str, author_name: str, author_email: str, title: str):
-    """
-    Ouvre une Pull Request sur le dépôt cible et la fusionne automatiquement.
-    """
-    gh = Github(token)
-    repo = gh.get_repo(repo_fullname)
-    
-    branch_name = f"aurore/{int(time.time())}"
-    base = repo.get_branch(repo.default_branch)
-    repo.create_git_ref(ref=f"refs/heads/{branch_name}", sha=base.commit.sha)
+def render_html(title, summary, image_url):
+    """Génère le contenu HTML de l'article avec Jinja2."""
+    print("Génération du fichier HTML...")
+    try:
+        env = Environment(loader=FileSystemLoader('src/templates'))
+        template = env.get_template('article.html.j2') # Assure-toi que ton template a cette extension
+        return template.render(
+            title=title,
+            summary=summary,
+            image_url=image_url
+        )
+    except Exception as e:
+        print(f"Erreur lors du rendu du template Jinja : {e}")
+        return None
 
-    commit_message = f"feat(aurore): Ajout article '{title}'"
-    committer = InputGitAuthor(author_name, author_email)
+def create_github_pr(title, summary, image_url, config):
+    """Crée le HTML et pousse une PR sur le repo GitHub du site configuré."""
+    html_content = render_html(title, summary, image_url)
+    if not html_content:
+        return None
 
-    # On crée le fichier directement. Pas besoin de vérifier son existence
-    # car la branche est nouvelle.
-    repo.create_file(
-        path=path, 
-        message=commit_message, 
-        content=html, 
-        branch=branch_name, 
-        committer=committer
-    )
-
-    pr_title = f"Proposition d'article : {title}"
-    pr_body = "Cet article a été généré automatiquement par Aurore et sera fusionné dans 30 secondes."
-    
-    pr = repo.create_pull(
-        title=pr_title,
-        body=pr_body,
-        head=branch_name,
-        base=repo.default_branch
-    )
-    print(f"INFO: Pull Request créée avec succès : {pr.html_url}")
-    
-    print("INFO: Attente de 30 secondes avant la fusion automatique...")
-    time.sleep(30)
-    
-    pr.merge()
-    print("INFO: Pull Request fusionnée automatiquement avec succès !")
-    
-    return pr.html_url
+    repo_name = config['site_repo_name']
+    print(f"Début du processus de commit sur le dépôt : {repo_name}")
+    try:
+        gh_token = os.environ["GH_TOKEN"]
+        g = Github(gh_token)
+        repo = g.get_repo(repo_name)
+        
+        main_branch = repo.get_branch("main")
+        base_tree = repo.get_git_tree(main_branch.commit.sha)
+        
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H%M%S')
+        filename = f"articles/{timestamp}-{title.lower().replace(' ', '-')[:20]}.html"
+        
+        element = InputGitTreeElement(path=filename, mode='100644', type='blob', content=html_content)
+        
+        tree = repo.create_git_tree([element], base_tree)
+        parent_commit = repo.get_git_commit(main_branch.commit.sha)
+        
+        commit = repo.create_git_commit(
+            message=f"🤖 Aurore : Ajout de l'article '{title}'",
+            tree=tree,
+            parents=[parent_commit]
+        )
+        
+        new_branch_name = f"aurore/article-{timestamp}"
+        repo.create_git_ref(ref=f"refs/heads/{new_branch_name}", sha=commit.sha)
+        
+        pr = repo.create_pull(
+            title=f"Proposition d'article : {title}",
+            body="Cet article a été généré automatiquement par Aurore. Merger pour publier.",
+            head=new_branch_name,
+            base="main"
+        )
+        
+        print(f"Pull Request créée avec succès : {pr.html_url}")
+        return pr.html_url
+        
+    except Exception as e:
+        print(f"Erreur critique lors du push sur GitHub : {e}")
+        return None
