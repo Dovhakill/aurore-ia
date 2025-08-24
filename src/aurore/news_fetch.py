@@ -1,44 +1,21 @@
-# src/aurore/news_fetch.py
-import requests
-import json
-from urllib.parse import urlparse
-from .config import Settings
+import os
+from newsapi import NewsApiClient
 
-# On construit l'URL du nouveau proxy GNews à partir de l'URL du proxy mémoire
-GNEWS_PROXY_URL = Settings.BLOBS_PROXY_URL.replace("blobs-proxy", "gnews-proxy")
-
-def _auth_headers():
-    """Prépare les en-têtes pour s'authentifier auprès de nos PROPRES proxys."""
-    return {"X-AURORE-TOKEN": Settings.AURORE_BLOBS_TOKEN}
-
-def fetch_top_fr(page_size: int = 40):
-    """Récupère les news en appelant notre propre proxy Netlify."""
-    
-    r = requests.get(GNEWS_PROXY_URL, headers=_auth_headers(), timeout=30)
-    r.raise_for_status()
-    data = r.json()
-    
-    out = []
-    for a in data.get("articles", []):
-        if not a.get("url") or not a.get("title"):
-            continue
-        
-        out.append({
-            "title": a.get("title", "").strip(),
-            "url": a.get("url"),
-            "source": a.get("source", {}).get("name", ""),
-            "publishedAt": a.get("publishedAt", ""),
-            "description": a.get("description", "") or "",
-        })
-    return out
-
-# Note : cette fonction n'est plus très fiable car on ne peut pas faire de recherche
-# aussi précise via notre proxy simple. On la garde simplifiée.
-def find_additional_sources(topic: str, existing_url: str, max_sources: int = 3):
-    return [existing_url]
-
-def _domain(url: str) -> str:
+def get_news_from_api(config):
+    """Récupère les nouvelles en fonction de la configuration."""
+    print(f"Récupération des articles pour la query : \"{config['news_api_query']}\"")
     try:
-        return urlparse(url).netloc
-    except Exception:
-        return ""
+        newsapi_key = os.environ["NEWSAPI_KEY"]
+        api_client = NewsApiClient(api_key=newsapi_key)
+        
+        all_articles = api_client.get_everything(
+            q=config['news_api_query'],
+            sources=config['news_api_sources'],
+            language='fr',
+            sort_by='publishedAt',
+            page_size=30  # On prend une marge pour la déduplication
+        )
+        return all_articles.get('articles', [])
+    except Exception as e:
+        print(f"Erreur critique lors de la récupération des news : {e}")
+        return []
