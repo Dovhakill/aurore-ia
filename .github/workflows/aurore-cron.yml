@@ -26,6 +26,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # --- NOUVELLE ÉTAPE DE DÉBOGAGE ---
+      - name: Debug - Lister les fichiers templates
+        run: |
+          echo "--- Contenu du dossier src/templates/ ---"
+          ls -l src/templates/
+          echo "----------------------------------------"
+
       - name: Run Aurore Bot for ${{ matrix.config }}
         env:
           GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
