@@ -28,7 +28,7 @@ jobs:
 
       - name: Run Aurore Bot for ${{ matrix.config }}
         env:
-          NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
+          GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           AURORE_BLOBS_TOKEN: ${{ secrets.AURORE_BLOBS_TOKEN }}
