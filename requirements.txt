@@ -1,4 +1,4 @@
-newsapi-python
+gnews
 google-generativeai
 PyGithub
 jinja2
