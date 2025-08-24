@@ -1,5 +1,3 @@
-# REMPLACER INTÉGRALEMENT LE CONTENU DE CE FICHIER
-
 import os
 import datetime
 from jinja2 import Environment, FileSystemLoader
@@ -10,8 +8,8 @@ def render_html(title, summary, image_url):
     print("Génération du fichier HTML...")
     try:
         env = Environment(loader=FileSystemLoader('src/templates'))
-        # CORRECTION FINALE : On remet le bon nom de fichier '.j2'
-        template = env.get_template('article.html.j2') 
+        # CORRECTION : On utilise le nom de fichier exact 'article.html'
+        template = env.get_template('article.html') 
         return template.render(
             title=title,
             summary=summary,
@@ -37,6 +35,7 @@ def create_github_pr(title, summary, image_url, config):
         main_branch = repo.get_branch("main")
 
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H%M%S')
+        # On nettoie le titre pour créer un nom de fichier valide
         safe_title = "".join(c for c in title if c.isalnum() or c in " ").strip()
         filename = f"articles/{timestamp}-{safe_title[:30].lower().replace(' ', '-')}.html"
 
