@@ -1,23 +1,24 @@
 name: Aurore Article Generation
 
 on:
-  workflow_dispatch: # Permet de lancer manuellement
+  workflow_dispatch: # Allows manual runs
   schedule:
-    - cron: '0 * * * *' # Toutes les heures
+    - cron: '0 * * * *' # Runs every hour
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false # Ensures one config failing doesn't stop the other
       matrix:
-        config: [libre, tech] # Lance un job pour chaque configuration
+        config: [libre, tech] # This creates two parallel jobs
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -27,7 +28,7 @@ jobs:
 
       - name: Run Aurore Bot for ${{ matrix.config }}
         env:
-          # On passe les secrets du repo GitHub à l'environnement du script
+          # Pass GitHub secrets to the script's environment
           NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
