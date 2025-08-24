@@ -8,8 +8,8 @@ def render_html(title, summary, image_url):
     print("Génération du fichier HTML...")
     try:
         env = Environment(loader=FileSystemLoader('src/templates'))
-        # CORRECTION : On s'assure d'utiliser le bon nom de template
-        template = env.get_template('article.html.j2') 
+        # CORRECTION DÉFINITIVE : On utilise le nom de fichier exact de ton dépôt
+        template = env.get_template('article.html') 
         return template.render(
             title=title,
             summary=summary,
@@ -23,7 +23,6 @@ def create_github_pr(title, summary, image_url, config):
     """Crée le HTML et pousse une PR sur le repo GitHub du site configuré."""
     html_content = render_html(title, summary, image_url)
     if not html_content:
-        # On arrête la fonction ici car le rendu HTML a échoué
         return None
 
     repo_name = config['site_repo_name']
@@ -34,15 +33,15 @@ def create_github_pr(title, summary, image_url, config):
         repo = g.get_repo(repo_name)
 
         main_branch = repo.get_branch("main")
-        base_tree = repo.get_git_tree(main_branch.commit.sha)
 
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H%M%S')
-        safe_title = "".join(c for c in title if c.isalnum() or c in " -").rstrip()
+        # On nettoie le titre pour créer un nom de fichier valide
+        safe_title = "".join(c for c in title if c.isalnum() or c in " ").strip()
         filename = f"articles/{timestamp}-{safe_title[:30].lower().replace(' ', '-')}.html"
 
         element = InputGitTreeElement(path=filename, mode='100644', type='blob', content=html_content)
 
-        tree = repo.create_git_tree([element], base_tree)
+        tree = repo.create_git_tree([element], repo.get_git_tree(main_branch.commit.sha))
         parent_commit = repo.get_git_commit(main_branch.commit.sha)
 
         commit = repo.create_git_commit(
