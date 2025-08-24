@@ -1,5 +1,3 @@
-# REMPLACER INTÉGRALEMENT LE CONTENU DE CE FICHIER
-
 import os
 import datetime
 from jinja2 import Environment, FileSystemLoader
@@ -9,13 +7,22 @@ def render_html(title, summary, image_url):
     """Génère le contenu HTML de l'article avec Jinja2."""
     print("Génération du fichier HTML...")
     try:
-        # CORRECTION FINALE : Le dossier est à la racine, pas dans 'src'
-        env = Environment(loader=FileSystemLoader('templates')) 
-        template = env.get_template('article.html.j2') 
+        env = Environment(loader=FileSystemLoader('templates'))
+        template = env.get_template('article.html.j2')
+
+        # --- CORRECTION : On crée et on passe la variable 'meta' ---
+        # On génère une meta description de 160 caractères max pour le SEO
+        meta_description = (summary[:157] + '...') if len(summary) > 160 else summary
+
+        meta_data = {
+            "description": meta_description
+        }
+
         return template.render(
             title=title,
             summary=summary,
-            image_url=image_url
+            image_url=image_url,
+            meta=meta_data  # On ajoute la variable manquante ici
         )
     except Exception as e:
         print(f"Erreur lors du rendu du template Jinja : {e}")
