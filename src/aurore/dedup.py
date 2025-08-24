@@ -1,62 +1,62 @@
+# REMPLACER INTÉGRALEMENT LE CONTENU DE CE FICHIER
+
+import os
+import json
 import requests
-import time
-from .config import Settings
 
-def _auth_headers():
-    """Prépare les en-têtes d'authentification."""
-    return {"X-AURORE-TOKEN": Settings.AURORE_BLOBS_TOKEN}
+def get_processed_urls(config):
+    """Récupère les URLs déjà traitées depuis Netlify Blobs."""
+    blob_key = config['blob_store_key']
+    blobs_proxy_url = os.getenv('BLOBS_PROXY_URL')
+    aurore_blobs_token = os.getenv('AURORE_BLOBS_TOKEN')
 
-def _make_request_with_retries(method, url, **kwargs):
-    """Effectue une requête HTTP avec plusieurs tentatives en cas d'erreur serveur."""
-    retries = 3
-    delay = 2  # secondes
-    for i in range(retries):
-        try:
-            if method.upper() == 'GET':
-                r = requests.get(url, **kwargs)
-            elif method.upper() == 'POST':
-                r = requests.post(url, **kwargs)
-            else:
-                raise ValueError("Unsupported HTTP method")
-            
-            # Si la requête réussit (même avec une erreur client 4xx), on arrête les tentatives
-            if r.status_code < 500:
-                return r
-            
-            # Si c'est une erreur serveur 5xx, on affiche un message et on attend
-            print(f"ATTENTION : Erreur serveur {r.status_code}. Tentative {i + 1}/{retries} dans {delay}s...")
-            
-        except requests.RequestException as e:
-            print(f"ATTENTION : Erreur de connexion. Tentative {i + 1}/{retries} dans {delay}s... ({e})")
-        
-        # On attend avant la prochaine tentative
-        time.sleep(delay)
-        delay *= 2 # On augmente le délai à chaque fois (backoff exponentiel)
+    if not blobs_proxy_url or not aurore_blobs_token:
+        print("Attention: Variables pour Netlify Blobs non configurées. La déduplication sera désactivée.")
+        return set()
 
-    # Si toutes les tentatives échouent, on lève la dernière erreur
-    raise Exception(f"Échec de la communication avec la mémoire après {retries} tentatives.")
+    print(f"Récupération des URLs traitées depuis le store '{blob_key}'...")
+    try:
+        headers = {'Authorization': f'Bearer {aurore_blobs_token}'}
+        res = requests.get(f"{blobs_proxy_url}/{blob_key}", headers=headers, timeout=10)
+        if res.status_code == 404:
+            print("Aucun store trouvé, création d'un nouveau set d'URLs.")
+            return set()
+        res.raise_for_status()
+        return set(res.json())
+    except requests.RequestException as e:
+        print(f"Erreur de communication avec Netlify Blobs (get) : {e}")
+        return set()
 
+def save_processed_urls(urls_set, config):
+    """Sauvegarde le set d'URLs mis à jour dans Netlify Blobs."""
+    blob_key = config['blob_store_key']
+    blobs_proxy_url = os.getenv('BLOBS_PROXY_URL')
+    aurore_blobs_token = os.getenv('AURORE_BLOBS_TOKEN')
 
-def seen(key: str) -> bool:
-    """Vérifie si une clé existe dans la mémoire."""
-    url = f"{Settings.BLOBS_PROXY_URL}?key={key}"
-    r = _make_request_with_retries('GET', url, headers=_auth_headers(), timeout=15)
-    
-    if r.status_code == 404:
-        return False
-    
-    r.raise_for_status()
-    return True
+    if not blobs_proxy_url or not aurore_blobs_token:
+        return
 
+    print(f"Sauvegarde de {len(urls_set)} URLs dans le store '{blob_key}'...")
+    try:
+        headers = {
+            'Authorization': f'Bearer {aurore_blobs_token}',
+            'Content-Type': 'application/json'
+        }
+        res = requests.put(
+            f"{blobs_proxy_url}/{blob_key}",
+            headers=headers,
+            data=json.dumps(list(urls_set)),
+            timeout=10
+        )
+        res.raise_for_status()
+        print("Sauvegarde réussie.")
+    except requests.RequestException as e:
+        print(f"Erreur de communication avec Netlify Blobs (save) : {e}")
 
-def mark(key: str, meta: dict):
-    """Marque une clé comme traitée dans la mémoire."""
-    print(f"INFO : Marquage de la clé {key} comme traitée.")
-    r = _make_request_with_retries(
-        'POST',
-        Settings.BLOBS_PROXY_URL,
-        headers=_auth_headers(),
-        json={"key": key, "meta": meta},
-        timeout=20
-    )
-    r.raise_for_status()
+def find_first_unique_article(articles, processed_urls_set):
+    """Trouve le premier article qui n'a pas encore été traité."""
+    for article in articles:
+        if article.get('url') not in processed_urls_set:
+            print(f"Nouvel article trouvé : {article['title']}")
+            return article
+    return None
