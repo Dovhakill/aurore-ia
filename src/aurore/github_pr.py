@@ -16,12 +16,11 @@ def render_html(template_name, context):
 
 def create_github_pr(title, summary, image_url, config):
     """
-    Génère un nouvel article, reconstruit la page d'accueil et publie le tout.
+    Génère un nouvel article, et selon la config, publie directement.
     """
     repo_name = config['site_repo_name']
     
     try:
-        # --- Initialisation ---
         gh_token = os.environ["GH_TOKEN"]
         g = Github(gh_token)
         repo = g.get_repo(repo_name)
@@ -34,42 +33,13 @@ def create_github_pr(title, summary, image_url, config):
             "image_url": image_url,
             "meta": {"description": meta_description}
         }
+        # On utilise le bon template pour les articles
         new_article_html = render_html('article.html.j2', article_context)
         if not new_article_html: return None
 
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H%M%S')
         safe_title = "".join(c for c in title if c.isalnum() or c in " ").strip()
         new_article_filename = f"articles/{timestamp}-{safe_title[:30].lower().replace(' ', '-')}.html"
-        
-        # --- 2. Récupération, analyse et tri des articles existants ---
-        print("Analyse des articles existants pour reconstruire la page d'accueil...")
-        articles_list = []
-        try:
-            contents = repo.get_contents("articles")
-            for content_file in contents:
-                try:
-                    filename = os.path.basename(content_file.path)
-                    # Extrait la date du nom de fichier pour le tri
-                    file_date = datetime.datetime.strptime(filename[:19], '%Y-%m-%d-%H%M%S')
-                    articles_list.append({"filename": filename, "date": file_date})
-                except (ValueError, IndexError):
-                    continue # Ignore les fichiers qui n'ont pas le bon format de nom
-        except Exception:
-            print("Dossier 'articles' non trouvé ou vide, on continue avec le nouvel article.")
-
-        # --- 3. Ajout du nouvel article à la liste ---
-        articles_list.append({
-            "filename": os.path.basename(new_article_filename),
-            "date": datetime.datetime.now()
-        })
-        articles_list.sort(key=lambda x: x['date'], reverse=True)
-        
-        # --- 4. Reconstruction de la page d'accueil (index.html) ---
-        # Pour reconstruire l'index, il nous faudrait les détails de chaque article (titre, image...).
-        # C'est une opération très lourde (télécharger et parser chaque fichier).
-        # On va d'abord résoudre le bug de publication, puis on implémentera cette logique.
-        # Pour l'instant, on se concentre sur la publication du nouvel article.
-
         commit_message = f"🤖 Aurore : Ajout de l'article '{title}'"
         
         if config.get("auto_publish_direct", True):
@@ -84,7 +54,7 @@ def create_github_pr(title, summary, image_url, config):
         else:
             # Mode PR en backup
             # ...
-            return "Mode PR non implémenté dans cette version."
+            return "Mode PR non implémenté."
 
     except Exception as e:
         print(f"Erreur critique lors de l'opération GitHub : {e}")
