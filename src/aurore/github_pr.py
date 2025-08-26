@@ -1,7 +1,7 @@
 import os
 import datetime
 from jinja2 import Environment, FileSystemLoader
-from github import Github, InputGitTreeElement, GithubException
+from github import Github, GithubException
 from bs4 import BeautifulSoup
 
 def render_html(template_name, context):
@@ -35,20 +35,27 @@ def create_github_pr(title, summary, image_url, config):
         print("Analyse des articles existants pour reconstruire l'index...")
         articles_list = []
         try:
-            # CORRECTION : On gère le cas où le dossier 'articles' n'existe pas
             contents = repo.get_contents("articles")
             for file in contents:
-                if file.name.endswith('.html'):
+                if not file.name.endswith('.html'):
+                    continue # Ignore les fichiers qui ne sont pas des HTML
+
+                # --- CORRECTION : On ignore les fichiers avec un nom mal formaté ---
+                try:
+                    file_date = datetime.datetime.strptime(file.name[:19], '%Y-%m-%d-%H%M%S')
                     file_content_decoded = repo.get_contents(file.path).decoded_content.decode('utf-8')
                     soup = BeautifulSoup(file_content_decoded, 'html.parser')
                     article_title = soup.find('h1').text if soup.find('h1') else "Titre non trouvé"
                     article_image = soup.find('img')['src'] if soup.find('img') else ""
-                    file_date = datetime.datetime.strptime(file.name[:19], '%Y-%m-%d-%H%M%S')
 
                     articles_list.append({
                         "filename": file.name, "date": file_date, "title": article_title,
                         "image_url": article_image, "date_human": file_date.strftime("%d %B %Y")
                     })
+                except (ValueError, IndexError):
+                    print(f"AVERTISSEMENT : Fichier '{file.name}' ignoré car son nom n'est pas au format attendu.")
+                    continue # On passe au fichier suivant
+
         except GithubException as e:
             if e.status == 404:
                 print("Le dossier 'articles' n'existe pas encore. Il sera créé.")
@@ -67,12 +74,12 @@ def create_github_pr(title, summary, image_url, config):
         latest_articles = articles_list[:10]
         index_context = {"articles": latest_articles}
         new_index_html = render_html('index.html.j2', index_context)
-        if not new_index_html: return "Erreur de MàJ de l'index."
+        if not new_index_html: return "Article publié, mais erreur de MàJ de l'index."
 
         # 5. Publication
         commit_message = f"🤖 Aurore : Ajout de '{title}' et MàJ de l'index"
 
-        # On met à jour l'index (ou on le crée)
+        # Mise à jour/Création de index.html
         try:
             index_file = repo.get_contents("index.html")
             repo.update_file("index.html", commit_message, new_index_html, index_file.sha, branch="main")
@@ -84,7 +91,7 @@ def create_github_pr(title, summary, image_url, config):
             else:
                 raise e
 
-        # On crée le nouvel article
+        # Création du nouvel article
         repo.create_file(new_article_filename, commit_message, new_article_html, branch="main")
         print(f"Article '{title}' publié.")
 
