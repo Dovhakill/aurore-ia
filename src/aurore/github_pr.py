@@ -1,40 +1,26 @@
-import os
-import datetime
+# Version finale de github_pr.py
+import os, datetime
 from jinja2 import Environment, FileSystemLoader
-from github import Github
+from github import Github, InputGitTreeElement, GithubException
 from bs4 import BeautifulSoup
 
 def render_html(template_name, context):
-    """Génère du HTML à partir d'un template et d'un contexte."""
     try:
         env = Environment(loader=FileSystemLoader('templates'))
         template = env.get_template(template_name)
         return template.render(context)
-    except Exception as e:
-        print(f"Erreur lors du rendu du template {template_name} : {e}")
-        return None
+    except Exception as e: return print(f"Erreur rendu template {template_name}: {e}")
 
-def create_github_pr(title, summary, image_url, config):
-    """Génère un nouvel article, reconstruit l'index et publie."""
+def publish_article_and_update_index(title, summary, image_url, config):
     repo_name = config['site_repo_name']
-
     try:
-        gh_token = os.environ["GH_TOKEN"]
-        g = Github(gh_token)
+        g = Github(os.environ["GH_TOKEN"])
         repo = g.get_repo(repo_name)
 
-        # --- 1. Création du HTML du nouvel article ---
-        meta_description = (summary[:157] + '...') if len(summary) > 160 else summary
-
-        # CORRECTION : On calcule la date ici
-        publication_date = datetime.datetime.now().strftime("%d %B %Y")
-
+        # 1. Création du HTML du nouvel article
         article_context = {
-            "title": title,
-            "summary": summary,
-            "image_url": image_url,
-            "meta": {"description": meta_description},
-            "publication_date": publication_date # On passe la date au template
+            "title": title, "summary": summary, "image_url": image_url,
+            "meta": {"description": (summary[:157] + '...') if len(summary) > 160 else summary}
         }
         new_article_html = render_html('article.html.j2', article_context)
         if not new_article_html: return None
@@ -43,19 +29,51 @@ def create_github_pr(title, summary, image_url, config):
         safe_title = "".join(c for c in title if c.isalnum() or c in " ").strip()
         new_article_filename = f"articles/{timestamp}-{safe_title[:30].lower().replace(' ', '-')}.html"
 
-        # Le reste de la logique pour reconstruire l'index et publier...
-        # (Ce code reste complexe et sujet à des optimisations futures)
+        # 2. Récupération des articles existants
+        articles_list = []
+        try:
+            contents = repo.get_contents("articles")
+            for file in contents:
+                if file.name.endswith('.html'):
+                    articles_list.append({"filename": file.name, "date": datetime.datetime.strptime(file.name[:19], '%Y-%m-%d-%H%M%S')})
+        except GithubException as e:
+            if e.status == 404: print("Dossier 'articles' non trouvé, il sera créé.")
+            else: raise e
 
-        commit_message = f"🤖 Aurore : Ajout de '{title}' et MàJ de l'index"
+        # 3. Ajout du nouvel article, tri et reconstruction de l'index
+        articles_list.append({"filename": os.path.basename(new_article_filename), "date": datetime.datetime.now()})
+        articles_list.sort(key=lambda x: x['date'], reverse=True)
 
-        # Logique de publication (simplifiée pour la clarté)
-        repo.create_file(new_article_filename, commit_message, new_article_html, branch="main")
-        print(f"Article '{title}' publié.")
+        latest_articles_details = []
+        for article_data in articles_list[:10]:
+            if article_data['filename'] == os.path.basename(new_article_filename):
+                article_data['title'], article_data['image_url'], article_data['date_human'] = title, image_url, datetime.datetime.now().strftime("%d %B %Y")
+            else:
+                content = repo.get_contents(f"articles/{article_data['filename']}").decoded_content.decode('utf-8')
+                soup = BeautifulSoup(content, 'html.parser')
+                article_data['title'] = soup.find('h1').text if soup.find('h1') else "Titre"
+                article_data['image_url'] = soup.find('img')['src'] if soup.find('img') else ""
+                article_data['date_human'] = article_data['date'].strftime("%d %B %Y")
+            latest_articles_details.append(article_data)
 
-        # Mettre à jour l'index ici serait la prochaine étape
+        new_index_html = render_html('index.html.j2', {"articles": latest_articles_details})
+        if not new_index_html: return None
 
-        return f"Article '{title}' publié avec succès."
+        # 4. Commit des 2 fichiers (article + index) en une fois
+        main_ref = repo.get_git_ref('heads/main')
+        main_sha = main_ref.object.sha
+        base_tree = repo.get_git_tree(main_sha)
 
+        element_list = [
+            InputGitTreeElement(path=new_article_filename, mode='100644', type='blob', content=new_article_html),
+            InputGitTreeElement(path='index.html', mode='100644', type='blob', content=new_index_html, sha=None)
+        ]
+
+        tree = repo.create_git_tree(element_list, base_tree)
+        parent = repo.get_git_commit(main_sha)
+        commit = repo.create_git_commit(f"🤖 Aurore : Ajout de '{title}' et MàJ de l'index", tree, [parent])
+        main_ref.edit(commit.sha)
+
+        return f"Article '{title}' publié et index mis à jour."
     except Exception as e:
-        print(f"Erreur critique lors de l'opération GitHub : {e}")
-        return None
+        return print(f"Erreur critique lors de l'opération GitHub : {e}")
