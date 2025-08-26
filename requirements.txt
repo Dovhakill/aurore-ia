@@ -5,3 +5,4 @@ jinja2
 python-dotenv
 requests
 beautifulsoup4
+python-unsplash-v2
