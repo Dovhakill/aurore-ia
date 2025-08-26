@@ -1,7 +1,7 @@
 import os
 import datetime
 from jinja2 import Environment, FileSystemLoader
-from github import Github, InputGitTreeElement
+from github import Github, InputGitTreeElement, GithubException
 from bs4 import BeautifulSoup
 
 def render_html(template_name, context):
@@ -35,45 +35,58 @@ def create_github_pr(title, summary, image_url, config):
         print("Analyse des articles existants pour reconstruire l'index...")
         articles_list = []
         try:
+            # CORRECTION : On gère le cas où le dossier 'articles' n'existe pas
             contents = repo.get_contents("articles")
             for file in contents:
                 if file.name.endswith('.html'):
-                    articles_list.append({"filename": file.name, "date": datetime.datetime.strptime(file.name[:19], '%Y-%m-%d-%H%M%S')})
-        except Exception:
-            print("Dossier 'articles' non trouvé ou vide. On continue.")
+                    file_content_decoded = repo.get_contents(file.path).decoded_content.decode('utf-8')
+                    soup = BeautifulSoup(file_content_decoded, 'html.parser')
+                    article_title = soup.find('h1').text if soup.find('h1') else "Titre non trouvé"
+                    article_image = soup.find('img')['src'] if soup.find('img') else ""
+                    file_date = datetime.datetime.strptime(file.name[:19], '%Y-%m-%d-%H%M%S')
+
+                    articles_list.append({
+                        "filename": file.name, "date": file_date, "title": article_title,
+                        "image_url": article_image, "date_human": file_date.strftime("%d %B %Y")
+                    })
+        except GithubException as e:
+            if e.status == 404:
+                print("Le dossier 'articles' n'existe pas encore. Il sera créé.")
+            else:
+                raise e
 
         # 3. Ajout du nouvel article et tri
-        articles_list.append({"filename": os.path.basename(new_article_filename), "date": datetime.datetime.now()})
+        new_file_date = datetime.datetime.now()
+        articles_list.append({
+            "filename": os.path.basename(new_article_filename), "date": new_file_date, "title": title,
+            "image_url": image_url, "date_human": new_file_date.strftime("%d %B %Y")
+        })
         articles_list.sort(key=lambda x: x['date'], reverse=True)
 
         # 4. Reconstruction de l'index
-        latest_articles_details = []
-        for article_data in articles_list[:10]:
-            file_content_decoded = repo.get_contents(f"articles/{article_data['filename']}").decoded_content.decode('utf-8')
-            soup = BeautifulSoup(file_content_decoded, 'html.parser')
-            article_data['title'] = soup.find('h1').text if soup.find('h1') else "Titre non trouvé"
-            article_data['image_url'] = soup.find('img')['src'] if soup.find('img') else ""
-            article_data['date_human'] = article_data['date'].strftime("%d %B %Y")
-            latest_articles_details.append(article_data)
-
-        index_context = {"articles": latest_articles_details}
+        latest_articles = articles_list[:10]
+        index_context = {"articles": latest_articles}
         new_index_html = render_html('index.html.j2', index_context)
-        if not new_index_html: return None
+        if not new_index_html: return "Erreur de MàJ de l'index."
 
-        # 6. Publication des DEUX fichiers
+        # 5. Publication
         commit_message = f"🤖 Aurore : Ajout de '{title}' et MàJ de l'index"
-        main_ref = repo.get_git_ref('heads/main')
-        main_sha = main_ref.object.sha
-        base_tree = repo.get_git_tree(main_sha)
-        element_list = [
-            InputGitTreeElement(path=new_article_filename, mode='100644', type='blob', content=new_article_html),
-            InputGitTreeElement(path='index.html', mode='100644', type='blob', content=new_index_html)
-        ]
 
-        tree = repo.create_git_tree(element_list, base_tree)
-        parent = repo.get_git_commit(main_sha)
-        commit = repo.create_git_commit(commit_message, tree, [parent])
-        main_ref.edit(commit.sha)
+        # On met à jour l'index (ou on le crée)
+        try:
+            index_file = repo.get_contents("index.html")
+            repo.update_file("index.html", commit_message, new_index_html, index_file.sha, branch="main")
+            print("index.html mis à jour.")
+        except GithubException as e:
+            if e.status == 404:
+                repo.create_file("index.html", commit_message, new_index_html, branch="main")
+                print("index.html créé.")
+            else:
+                raise e
+
+        # On crée le nouvel article
+        repo.create_file(new_article_filename, commit_message, new_article_html, branch="main")
+        print(f"Article '{title}' publié.")
 
         return f"Article '{title}' publié et index mis à jour."
 
