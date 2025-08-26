@@ -1,47 +1,43 @@
 {% extends "base.html.j2" %}
 
-{% block title %}{{ title }} | L’Horizon Libre{% endblock %}
-
-{% block meta %}
-  <meta name="description" content="{{ meta.description }}">
-  <meta name="category" content="{{ category | lower }}">
-  <meta name="keywords" content="{{ meta.keywords | join(', ') }}">
-  <meta property="og:title" content="{{ title }}">
-  <meta property="og:description" content="{{ meta.description }}">
-{% endblock %}
+{% block title %}{{ title }} - Horizon Libre{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <article>
-      <header class="mb-8 text-center">
-        <h1 class="text-3xl md:text-5xl font-bold">{{ title }}</h1>
-        <p class="text-lg text-gray-600 mt-4">{{ dek }}</p>
-        <time class="text-sm text-gray-500 mt-4 block" datetime="{{ published_iso }}">{{ published_human }}</time>
-      </header>
-      
-      {% if image and image.url %}
-      <figure class="my-8">
-        <img src="{{ image.url }}" alt="{{ title }}" class="article-featured-image shadow-lg">
-        <figcaption class="text-xs text-gray-500 text-center mt-2">
-          Photo par <a href="{{ image.author_url }}">{{ image.author_name }}</a> sur <a href="https://unsplash.com">Unsplash</a>
-        </figcaption>
-      </figure>
-      {% endif %}
+<article class="bg-white p-6 md:p-8 rounded-lg shadow-md max-w-4xl mx-auto">
+    
+    <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{{ title }}</h1>
+    
+    <div class="border-t border-b border-gray-200 py-4 my-6">
+        <p class="text-sm text-gray-500">Publié le {{ "now" | strftime("%d %B %Y") }} par Aurore IA</p>
+    </div>
 
-      <section class="prose prose-lg max-w-none">
-        {{ body | safe }}
-      </section>
+    {# On affiche l'image seulement si elle existe #}
+    {% if image_url and image_url != 'None' %}
+    <figure class="my-8">
+        <img src="{{ image_url }}" alt="{{ title }}" class="rounded-lg shadow-lg w-full h-auto object-cover">
+    </figure>
+    {% endif %}
 
-      {% if bullets %}
-      <section class="key-points mt-12 p-6 bg-gray-100 rounded-lg">
-        <h3 class="text-2xl font-bold mb-4">Points clés</h3>
-        <ul class="list-disc list-inside space-y-2">
-          {% for b in bullets %}
-          <li>{{ b }}</li>
-          {% endfor %}
-        </ul>
-      </section>
-      {% endif %}
-    </article>
-</div>
+    {# CORRECTION PRINCIPALE : On affiche le résumé ici #}
+    {# Le filtre 'safe' est crucial pour interpréter le HTML/Markdown si besoin #}
+    <div class="prose lg:prose-xl max-w-none text-gray-800">
+        {{ summary | safe }}
+    </div>
+
+    {# Appel à l'action pour le soutien #}
+    <div class="mt-12 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+        <h3 class="font-semibold text-blue-800">Soutenez un média indépendant</h3>
+        <p class="text-sm text-blue-700 mt-2">Si vous appréciez cette analyse neutre et factuelle, soutenez notre projet sur Tipeee. Chaque contribution renforce notre indépendance.</p>
+        <a href="URL_DE_VOTRE_TIPEEE" target="_blank" class="mt-4 inline-block bg-blue-800 text-white px-6 py-2 rounded-lg hover:bg-blue-900 transition font-semibold">Faire un don</a>
+    </div>
+
+</article>
+{% endblock %}
+
+{# On ajoute un peu de style pour le formatage du texte de l'article #}
+{% block styles %}
+<style>
+    .prose p { margin-bottom: 1em; }
+    .prose h3 { font-weight: bold; margin-top: 1.5em; margin-bottom: 0.5em; }
+</style>
 {% endblock %}
