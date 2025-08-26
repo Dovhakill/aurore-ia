@@ -1,36 +1,17 @@
-name: Aurore Article Generation
+name: DIAGNOSTIC - Afficher la structure des fichiers
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 * * * *'
 
 jobs:
-  build:
+  debug:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        config: [libre, tech]
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run Aurore Bot for ${{ matrix.config }}
-        env:
-          GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          AURORE_BLOBS_TOKEN: ${{ secrets.AURORE_BLOBS_TOKEN }}
-          BLOBS_PROXY_URL: ${{ secrets.BLOBS_PROXY_URL }}
-        run: python -m src.aurore --config ${{ matrix.config }}
+      - name: Debug - Afficher tous les fichiers du projet (récursivement)
+        run: |
+          echo "--- ARBORESCENCE COMPLÈTE DU PROJET ---"
+          ls -R
+          echo "-------------------------------------"
