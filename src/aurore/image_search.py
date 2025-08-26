@@ -1,28 +1,37 @@
-import os
-from pyunsplash import PyUnsplash
+import requests
+from bs4 import BeautifulSoup
 
-def find_image(query):
-    """Trouve une image sur Unsplash en lien avec la query."""
-    try:
-        unsplash_access_key = os.environ["UNSPLASH_ACCESS_KEY"]
-        if not unsplash_access_key:
-            print("AVERTISSEMENT: Clé UNSPLASH_ACCESS_KEY manquante.")
-            return None
-
-        print(f"Recherche d'une image pour '{query}' sur Unsplash...")
-        pu = PyUnsplash(api_key=unsplash_access_key)
-        photos = pu.photos(type_='random', count=1, query=query)
-
-        if photos and photos.entries:
-            photo = photos.entries[0]
-            print(f"Image trouvée : {photo.link_download}")
-            return photo.url_regular
-        else:
-            print("Aucune image trouvée pour cette recherche.")
-            return None
-    except KeyError:
-        print("AVERTISSEMENT: Le secret UNSPLASH_ACCESS_KEY n'est pas configuré.")
+def find_image(article_url):
+    """
+    Extrait l'image principale (og:image) de l'URL de l'article source.
+    """
+    if not article_url:
+        print("AVERTISSEMENT: URL de l'article source manquante.")
         return None
+
+    try:
+        # On se présente comme un navigateur pour éviter d'être bloqué
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+
+        print(f"Extraction de l'image depuis l'URL source : {article_url}")
+        response = requests.get(article_url, headers=headers, timeout=10, allow_redirects=True)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # La méthode la plus fiable est de chercher la balise 'og:image'
+        og_image = soup.find('meta', property='og:image')
+
+        if og_image and og_image.get('content'):
+            image_url = og_image['content']
+            print(f"Image 'og:image' trouvée : {image_url}")
+            return image_url
+        else:
+            print("AVERTISSEMENT: Balise 'og:image' non trouvée dans l'article source.")
+            return None
+
     except Exception as e:
-        print(f"Erreur lors de la recherche d'image sur Unsplash : {e}")
+        print(f"Erreur lors de l'extraction de l'image de la source : {e}")
         return None
