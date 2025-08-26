@@ -1,5 +1,7 @@
-# Version finale de __main__.py
-import argparse, os, json, datetime
+import argparse
+import os
+import json
+import datetime
 from dotenv import load_dotenv
 from . import news_fetch, summarize, github_pr, dedup, image_search
 
@@ -15,16 +17,26 @@ def main():
 
     processed_urls = dedup.get_processed_urls(CONFIG)
     articles = news_fetch.get_news_from_api(CONFIG)
-    if not articles: print("Aucun article trouvé. Arrêt."); return
+    if not articles:
+        print("Aucun article trouvé. Arrêt.")
+        return
 
     article_to_process = dedup.find_first_unique_article(articles, processed_urls)
-    if not article_to_process: print("Aucun nouvel article à traiter. Arrêt."); return
+    if not article_to_process:
+        print("Aucun nouvel article à traiter. Arrêt.")
+        return
 
     title, summary = summarize.summarize_article(article_to_process.get('content', ''), CONFIG)
-    if not title or not summary: print("Échec de la génération du résumé. Arrêt."); return
+    if not title or not summary:
+        print("Échec de la génération du résumé. Arrêt.")
+        return
 
-    image_url = image_search.find_image(title)
-    if not image_url: print("Aucune image trouvée sur Unsplash, on continue sans.");
+    # CORRECTION : On passe l'URL de l'article source à la fonction de recherche d'image
+    image_url = image_search.find_image(article_to_process.get('url'))
+
+    # Si aucune image n'est trouvée, on continue sans (le template gère ce cas)
+    if not image_url:
+        print("On continue sans image principale.")
 
     result = github_pr.publish_article_and_update_index(title, summary, image_url, CONFIG)
 
