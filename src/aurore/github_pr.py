@@ -1,3 +1,5 @@
+# CODE FINAL ET VÉRIFIÉ POUR src/aurore/github_pr.py
+
 import os
 import datetime
 from jinja2 import Environment, FileSystemLoader
@@ -6,7 +8,7 @@ from github import Github
 def render_html(template_name, context):
     """Génère du HTML à partir d'un template et d'un contexte."""
     try:
-        # Le chemin est 'templates' (à la racine)
+        # Le chemin correct est 'templates' (à la racine du projet)
         env = Environment(loader=FileSystemLoader('templates'))
         template = env.get_template(template_name)
         return template.render(context)
@@ -16,7 +18,7 @@ def render_html(template_name, context):
 
 def create_github_pr(title, summary, image_url, config):
     """
-    Génère un nouvel article, et selon la config, publie directement.
+    Génère un nouvel article et le publie directement sur la branche main.
     """
     repo_name = config['site_repo_name']
     
@@ -33,7 +35,7 @@ def create_github_pr(title, summary, image_url, config):
             "image_url": image_url,
             "meta": {"description": meta_description}
         }
-        # On utilise le bon template pour les articles
+        # On utilise le template 'article.html.j2' pour générer la page de l'article
         new_article_html = render_html('article.html.j2', article_context)
         if not new_article_html: return None
 
@@ -52,9 +54,8 @@ def create_github_pr(title, summary, image_url, config):
             )
             return f"Article '{title}' publié directement."
         else:
-            # Mode PR en backup
-            # ...
-            return "Mode PR non implémenté."
+            # Le mode Pull Request reste en backup si on le désactive dans le config.json
+            return "Mode PR non implémenté dans cette version, veuillez activer 'auto_publish_direct'."
 
     except Exception as e:
         print(f"Erreur critique lors de l'opération GitHub : {e}")
