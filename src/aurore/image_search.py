@@ -1,38 +1,28 @@
-from unsplash.api import Api
-from unsplash.auth import Auth
-from .config import Settings
-import logging
+import os
+from pyunsplash import PyUnsplash
 
-logger = logging.getLogger("aurore")
-
-def find_unsplash_image(query: str):
-    """
-    Cherche une image pertinente sur Unsplash et renvoie ses détails.
-    """
+def find_image(query):
+    """Trouve une image sur Unsplash en lien avec la query."""
     try:
-        auth = Auth(Settings.UNSPLASH_ACCESS_KEY, None, None)
-        unsplash = Api(auth)
-        
-        # La réponse globale est un DICTIONNAIRE
-        search_results = unsplash.search.photos(query, per_page=1)
-        
-        # On accède donc à la liste des photos avec des CROCHETS
-        if search_results and search_results.get("results"):
-            photo_list = search_results["results"]
-            
-            if photo_list:
-                # 'photo' est un OBJET dans la liste
-                photo = photo_list[0]
-                logger.info("Image trouvée sur Unsplash pour la recherche '%s'", query)
-                
-                # On accède donc aux détails de la photo avec des POINTS
-                return {
-                    "url": photo.urls.regular,
-                    "author_name": photo.user.name,
-                    "author_url": photo.user.links.html
-                }
+        unsplash_access_key = os.environ["UNSPLASH_ACCESS_KEY"]
+        if not unsplash_access_key:
+            print("AVERTISSEMENT: Clé UNSPLASH_ACCESS_KEY manquante.")
+            return None
+
+        print(f"Recherche d'une image pour '{query}' sur Unsplash...")
+        pu = PyUnsplash(api_key=unsplash_access_key)
+        photos = pu.photos(type_='random', count=1, query=query)
+
+        if photos and photos.entries:
+            photo = photos.entries[0]
+            print(f"Image trouvée : {photo.link_download}")
+            return photo.url_regular
+        else:
+            print("Aucune image trouvée pour cette recherche.")
+            return None
+    except KeyError:
+        print("AVERTISSEMENT: Le secret UNSPLASH_ACCESS_KEY n'est pas configuré.")
+        return None
     except Exception as e:
-        logger.warning("Erreur lors de la recherche d'image sur Unsplash : %s", e)
-    
-    logger.info("Aucune image trouvée sur Unsplash pour '%s'.", query)
-    return None
+        print(f"Erreur lors de la recherche d'image sur Unsplash : {e}")
+        return None
