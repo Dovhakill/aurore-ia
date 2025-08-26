@@ -1,70 +1,38 @@
-import argparse
-import os
-import json
-import datetime
+# Version finale de __main__.py
+import argparse, os, json, datetime
 from dotenv import load_dotenv
-
-from . import news_fetch
-from . import summarize
-from . import github_pr
-from . import dedup
-
-def load_app_config(config_name):
-    try:
-        with open('config.json', 'r', encoding='utf-8') as f:
-            configs = json.load(f)
-        if config_name not in configs:
-            raise ValueError(f"Configuration '{config_name}' non trouvée dans config.json")
-        print(f"Configuration '{config_name}' chargée avec succès.")
-        return configs[config_name]
-    except Exception as e:
-        print(f"Erreur de chargement de la config : {e}")
-        exit(1)
+from . import news_fetch, summarize, github_pr, dedup, image_search
 
 def main():
     print(f"--- Lancement d'Aurore ({datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}) ---")
-    
     parser = argparse.ArgumentParser(description="Génère un article pour Horizon.")
-    parser.add_argument('--config', type=str, required=True, help='Configuration à utiliser (ex: libre ou tech)')
+    parser.add_argument('--config', type=str, required=True, help='Configuration à utiliser')
     args = parser.parse_args()
-    
-    CONFIG = load_app_config(args.config)
+
+    with open('config.json', 'r', encoding='utf-8') as f:
+        CONFIG = json.load(f)[args.config]
     load_dotenv()
 
-    processed_urls_set = dedup.get_processed_urls(CONFIG)
+    processed_urls = dedup.get_processed_urls(CONFIG)
     articles = news_fetch.get_news_from_api(CONFIG)
+    if not articles: print("Aucun article trouvé. Arrêt."); return
 
-    if not articles:
-        print("Aucun article trouvé par l'API. Arrêt.")
-        return
+    article_to_process = dedup.find_first_unique_article(articles, processed_urls)
+    if not article_to_process: print("Aucun nouvel article à traiter. Arrêt."); return
 
-    article_to_process = dedup.find_first_unique_article(articles, processed_urls_set)
+    title, summary = summarize.summarize_article(article_to_process.get('content', ''), CONFIG)
+    if not title or not summary: print("Échec de la génération du résumé. Arrêt."); return
 
-    if not article_to_process:
-        print("Aucun nouvel article à traiter après filtrage des doublons. Arrêt.")
-        return
+    image_url = image_search.find_image(title)
+    if not image_url: print("Aucune image trouvée sur Unsplash, on continue sans.");
 
-    title, summary_markdown = summarize.summarize_article(
-        article_content=article_to_process.get('content', ''),
-        config=CONFIG
-    )
+    result = github_pr.publish_article_and_update_index(title, summary, image_url, CONFIG)
 
-    if not title or not summary_markdown:
-        print("Échec de la génération du résumé. Arrêt.")
-        return
+    if result:
+        processed_urls.add(article_to_process['url'])
+        dedup.save_processed_urls(processed_urls, CONFIG)
+        print(f"Résultat final : {result}")
 
-    result_message = github_pr.create_github_pr(
-        title=title,
-        summary=summary_markdown,
-        image_url=article_to_process.get('urlToImage'),
-        config=CONFIG
-    )
-
-    if result_message:
-        processed_urls_set.add(article_to_process['url'])
-        dedup.save_processed_urls(processed_urls_set, CONFIG)
-        print(f"Résultat final : {result_message}")
-    
     print("--- Fin du cycle d'Aurore ---")
 
 if __name__ == "__main__":
