@@ -1,5 +1,10 @@
-# Configuration minimale pour aurore-ia
-# On indique juste où se trouvent nos fonctions serverless.
+[build]
+  # On ignore les builds inutiles pour économiser les minutes
+  ignore = "git diff --quiet HEAD^ HEAD . ':(exclude)netlify/functions/'"
 
 [functions]
   directory = "netlify/functions"
+
+# On déclare explicitement notre "store" de blobs
+[[blobs]]
+  store = "processed_urls"
