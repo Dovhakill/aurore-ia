@@ -11,38 +11,19 @@
                 <a href="articles/{{ articles[0].filename }}" class="inline-flex items-center text-blue-800 font-semibold group">Lire l'analyse <i data-feather="arrow-right" class="ml-2 w-4 h-4"></i></a>
             </div>
             <div class="order-1 lg:order-2">
-                <a href="articles/{{ articles[0].filename }}">
-                    {# CORRECTION : On vérifie si l'URL de l'image existe #}
-                    {% if articles[0].image_url and articles[0].image_url != 'None' %}
-                        <img src="{{ articles[0].image_url }}" alt="{{ articles[0].title }}" class="rounded-lg shadow-xl w-full h-auto object-cover article-featured-image">
-                    {% else %}
-                        <div class="rounded-lg shadow-xl w-full h-64 bg-gray-200 flex items-center justify-center">
-                            <p class="text-gray-500">Image non disponible</p>
-                        </div>
-                    {% endif %}
-                </a>
+                <a href="articles/{{ articles[0].filename }}"><img src="{{ articles[0].image_url }}" alt="{{ articles[0].title }}" class="rounded-lg shadow-xl w-full h-auto object-cover article-featured-image"></a>
             </div>
         </div>
     </section>
     {% endif %}
 
-    {# CORRECTION : On n'affiche cette section que s'il y a plus d'un article #}
     {% if articles and articles|length > 1 %}
     <section id="recent-articles" class="mt-16">
         <h2 class="text-3xl font-bold mb-8 border-l-4 border-blue-800 pl-4">Nos derniers articles</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {% for article in articles[1:] %}
             <div class="bg-white rounded-lg shadow-md">
-                {# CORRECTION : On vérifie si l'URL de l'image existe #}
-                <a href="articles/{{ article.filename }}">
-                {% if article.image_url and article.image_url != 'None' %}
-                    <img src="{{ article.image_url }}" alt="{{ article.title }}" class="article-card-img">
-                {% else %}
-                    <div class="article-card-img bg-gray-200 flex items-center justify-center">
-                        <p class="text-gray-500 text-sm">Image non disp.</p>
-                    </div>
-                {% endif %}
-                </a>
+                <a href="articles/{{ article.filename }}"><img src="{{ article.image_url }}" alt="{{ article.title }}" class="article-card-img"></a>
                 <div class="p-6">
                     <h3 class="font-bold text-xl mt-2 mb-3">{{ article.title }}</h3>
                     <p class="text-gray-500 text-xs mb-3">{{ article.date_human }}</p>
