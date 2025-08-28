@@ -1,13 +1,5 @@
-# Configuration Netlify pour le site horizon-libre-site
+# Configuration minimale pour aurore-ia
+# On indique juste où se trouvent nos fonctions serverless.
 
-[build]
-  # 1. Installe les dépendances Python
-  # 2. Exécute notre script qui génère tout le site
-  command = "pip install -r requirements.txt && python build.py"
-  
-  # Le dossier final que Netlify doit publier (créé par build.py)
-  publish = "public"
-
-[build.environment]
-  # On dit à Netlify d'utiliser une version de Python
-  PYTHON_VERSION = "3.11"
+[functions]
+  directory = "netlify/functions"
