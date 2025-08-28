@@ -10,7 +10,7 @@ def main():
     parser = argparse.ArgumentParser(description="Génère un article pour Horizon.")
     parser.add_argument('--config', type=str, required=True, help='Configuration à utiliser')
     args = parser.parse_args()
-
+    
     with open('config.json', 'r', encoding='utf-8') as f:
         CONFIG = json.load(f)[args.config]
     load_dotenv()
@@ -31,20 +31,19 @@ def main():
         print("Échec de la génération du résumé. Arrêt.")
         return
 
-    # CORRECTION : On passe l'URL de l'article source à la fonction de recherche d'image
-    image_url = image_search.find_image(article_to_process.get('url'))
-
-    # Si aucune image n'est trouvée, on continue sans (le template gère ce cas)
+    # On utilise la bonne fonction de recherche d'image
+    image_url = image_search.find_image_from_source(article_to_process.get('url'))
     if not image_url:
-        print("On continue sans image principale.")
+        print("Aucune image trouvée, on continue sans.")
 
+    # On appelle le script de publication final
     result = github_pr.publish_article_and_update_index(title, summary, image_url, CONFIG)
 
     if result:
         processed_urls.add(article_to_process['url'])
         dedup.save_processed_urls(processed_urls, CONFIG)
         print(f"Résultat final : {result}")
-
+    
     print("--- Fin du cycle d'Aurore ---")
 
 if __name__ == "__main__":
