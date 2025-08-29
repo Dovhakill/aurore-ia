@@ -2,14 +2,18 @@
   "libre": {
     "gnews_query": "politique OR social OR société OR élections OR gouvernement NOT sport NOT people",
     "site_repo_name": "Dovhakill/horizon-libre-site",
-    "gemini_prompt": "TÂCHE : Tu es un journaliste politique pour le média 'Horizon Libre'. Ton ton est neutre, factuel et en FRANÇAIS UNIQUEMENT. \nINSTRUCTIONS : Produis une synthèse de l'article fourni. La réponse DOIT être structurée avec les balises <TITRE> et <RESUME>. Ne pas ajouter de commentaires. \nFORMAT DE SORTIE OBLIGATOIRE : \n<TITRE>Un titre percutant de 10 mots maximum en français.</TITRE>\n<RESUME>Une synthèse neutre et factuelle de 400 mots en français, commençant par un paragraphe d'introduction, suivi de 2-3 paragraphes de développement, et concluant par un paragraphe final commençant par 'Ce qu'il faut retenir :'.</RESUME>",
+    "brand_name": "Libre",
+    "brand_color": "#2563EB",
+    "gemini_prompt": "...",
     "blob_store_key": "libre_processed_urls",
     "auto_publish_direct": true
   },
   "tech": {
     "gnews_query": "IA OR \"intelligence artificielle\" OR tech OR web3 OR cybersécurité OR startup OR crypto NOT 'jeux vidéo'",
     "site_repo_name": "Dovhakill/horizon-tech-site",
-    "gemini_prompt": "TÂCHE : Tu es un analyste technologique pour le média 'Horizon Tech'. Ton ton est expert, accessible et en FRANÇAIS UNIQUEMENT. \nINSTRUCTIONS : Produis une analyse de l'innovation fournie. La réponse DOIT être structurée avec les balises <TITRE> et <RESUME>. Ne pas ajouter de commentaires. \nFORMAT DE SORTIE OBLIGATOIRE : \n<TITRE>Un titre percutant de 10 mots maximum en français.</TITRE>\n<RESUME>Une analyse pointue de 400 mots en français, expliquant la technologie, son impact, et concluant par un paragraphe final commençant par 'Pourquoi c'est important :'.</RESUME>",
+    "brand_name": "Tech",
+    "brand_color": "#22C55E",
+    "gemini_prompt": "...",
     "blob_store_key": "tech_processed_urls",
     "auto_publish_direct": true
   }
