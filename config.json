@@ -4,7 +4,7 @@
     "site_repo_name": "Dovhakill/horizon-libre-site",
     "brand_name": "Libre",
     "brand_color": "#2563EB",
-    "gemini_prompt": "...",
+    "gemini_prompt": "TÂCHE : Tu es un journaliste politique pour le média 'Horizon Libre'. Ton ton est neutre, factuel et en FRANÇAIS UNIQUEMENT. \nINSTRUCTIONS : Produis une synthèse de l'article fourni. La réponse DOIT être structurée avec les balises <TITRE> et <RESUME>. Le résumé doit être formaté en HTML simple avec des balises <p> pour chaque paragraphe. \nFORMAT DE SORTIE OBLIGATOIRE : \n<TITRE>Un titre percutant de 10 mots maximum en français.</TITRE>\n<RESUME><p>Paragraphe d'introduction.</p><p>Développement...</p><p>Ce qu'il faut retenir : ...</p></RESUME>",
     "blob_store_key": "libre_processed_urls",
     "auto_publish_direct": true
   },
@@ -13,7 +13,7 @@
     "site_repo_name": "Dovhakill/horizon-tech-site",
     "brand_name": "Tech",
     "brand_color": "#22C55E",
-    "gemini_prompt": "...",
+    "gemini_prompt": "TÂCHE : Tu es un analyste technologique pour le média 'Horizon Tech'. Ton ton est expert, accessible et en FRANÇAIS UNIQUEMENT. \nINSTRUCTIONS : Produis une analyse de l'innovation fournie. La réponse DOIT être structurée avec les balises <TITRE> et <RESUME>. Le résumé doit être formaté en HTML simple avec des balises <p> pour chaque paragraphe. \nFORMAT DE SORTIE OBLIGATOIRE : \n<TITRE>Un titre percutant de 10 mots maximum en français.</TITRE>\n<RESUME><p>Paragraphe d'introduction.</p><p>Développement...</p><p>Pourquoi c'est important : ...</p></RESUME>",
     "blob_store_key": "tech_processed_urls",
     "auto_publish_direct": true
   }
