@@ -1,6 +1,6 @@
 import os
 import re
-import sys  # <--- IMPORT AJOUTÉ
+import sys
 import google.generativeai as genai
 
 def parse_gemini_response(response_text):
@@ -26,12 +26,17 @@ def summarize_article(article_content, config):
         
     print("Génération du résumé avec Gemini...")
     try:
+        # La ligne correcte, sans faute de frappe
         gemini_api_key = os.environ["GEMINI_API_KEY"]
         genai.configure(api_key=gemini_api_key)
         
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        prompt = config['gemini_prompt'] + f"\n\nARTICLE À ANALYSER:\n{article_content}"
+        # J'ai vu que 'gemini_prompt' n'était pas dans ton config.json, je le retire pour éviter une autre erreur
+        # prompt = config['gemini_prompt'] + f"\n\nARTICLE À ANALYSER:\n{article_content}"
+        prompt_template = "Voici un article de presse. Crée un titre percutant et un résumé neutre et factuel. Le format de ta réponse doit être exclusivement : <TITRE>Ton titre</TITRE><RESUME>Ton résumé.</RESUME>"
+        prompt = prompt_template + f"\n\nARTICLE À ANALYSER:\n{article_content}"
+
         
+        model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
         
         title, summary_markdown = parse_gemini_response(response.text)
@@ -43,8 +48,9 @@ def summarize_article(article_content, config):
             return None, None
 
     except KeyError:
-        print("Erreur critique : Le secret GEMINI_API_KEY est manquant.")
-        sys.exit(1) # <--- ON FORCE L'ÉCHEC DU WORKFLOW ICI
+        # On met le bon message d'erreur pour le futur
+        print("Erreur critique : Le secret GEMINI_API_KEY est manquant dans l'environnement.")
+        sys.exit(1)
     except Exception as e:
         print(f"Erreur critique lors de la génération du résumé : {e}")
-        sys.exit(1) # <--- ON FORCE L'ÉCHEC DU WORKFLOW ICI
+        sys.exit(1)
