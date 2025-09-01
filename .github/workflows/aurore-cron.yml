@@ -11,10 +11,9 @@ on:
         required: true
         type: string
 
-  # Exécution programmée
-  schedule:
-    # Toutes les heures, à la minute 0
-    - cron: '0 * * * *'
+  # Exécution programmée (actuellement désactivée, à activer post-lancement)
+  # schedule:
+  #   - cron: '0 * * * *' # Exécution toutes les heures
 
 # Définition des jobs à exécuter
 jobs:
@@ -23,8 +22,6 @@ jobs:
     runs-on: ubuntu-latest
 
     # Permissions pour le GITHUB_TOKEN
-    # On applique le principe de moindre privilège.
-    # Le bot a seulement besoin d'écrire le contenu (articles + index).
     permissions:
       contents: write
 
@@ -46,12 +43,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Étape 4 : Exécuter le script d'Aurore pour chaque verticale
-      # On utilise une "matrix strategy" pour lancer un job par configuration définie ici.
-      # C'est plus propre et ça isole les exécutions.
+      # Étape 4 : Exécuter le script d'Aurore
       - name: Run Aurore IA
         env:
-          # Passage des secrets au script via les variables d'environnement
+          # --- CONFIGURATION FINALE ET COMPLETE DES SECRETS ---
           GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
