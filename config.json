@@ -1,18 +1,18 @@
 {
   "libre": {
-    "gnews_query": "...",
-    "site_repo_name": "...",
+    "gnews_query": "(élections OR gouvernement OR politique OR société) AND (France OR Europe)",
+    "site_repo_name": "Dovhakill/horizon-libre-site",
     "brand_name": "Libre",
-    "brand_color": "...",
-    "logo_filename": "...",
+    "brand_color": "#2563EB",
+    "logo_filename": "logo-libre.png",
     "blob_store_name": "aurore-libre-store"
   },
   "tech": {
-    "gnews_query": "...",
-    "site_repo_name": "...",
+    "gnews_query": "(\"intelligence artificielle\" OR IA OR cybersécurité OR web3 OR innovation technologique) NOT (crypto OR bitcoin)",
+    "site_repo_name": "Dovhakill/horizon-tech-site",
     "brand_name": "Tech",
-    "brand_color": "...",
-    "logo_filename": "...",
+    "brand_color": "#22C55E",
+    "logo_filename": "logo-tech.png",
     "blob_store_name": "aurore-tech-store"
   }
 }
