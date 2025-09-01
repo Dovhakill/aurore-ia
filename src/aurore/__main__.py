@@ -1,68 +1,60 @@
-import argparse
+# -*- coding: utf-8 -*-
 import os
+import sys
 import json
+import argparse
 import datetime
 from dotenv import load_dotenv
-
-# On importe tous nos modules spécialisés
-from . import news_fetch
-from . import summarize
-from . import github_pr
-from . import dedup
-from . import image_search
-from . import autotweet
+from . import news_fetch, summarize, github_pr, dedup, image_search, autotweet
 
 def main():
     """Fonction principale orchestrant la génération d'un article et sa publication."""
     print(f"--- Lancement d'Aurore ({datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}) ---")
     
     # Configuration
-    parser = argparse.ArgumentParser(description="Génère et publie un article pour Horizon Network.")
-    parser.add_argument('--config', type=str, required=True, help='Configuration à utiliser (ex: libre ou tech)')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, required=True, help="Nom de la configuration à utiliser (ex: libre)")
     args = parser.parse_args()
     
     with open('config.json', 'r', encoding='utf-8') as f:
         CONFIG = json.load(f)[args.config]
+    
     load_dotenv()
 
-    # Étape 1 : Vérifier la mémoire anti-doublons
+    # 1. Déduplication
     processed_urls = dedup.get_processed_urls(CONFIG)
-    
-    # Étape 2 : Récupérer les dernières nouvelles
     articles = news_fetch.get_news_from_api(CONFIG)
     if not articles:
         print("Aucun article trouvé par l'API. Arrêt.")
         return
 
-    # Étape 3 : Trouver le premier article non traité
     article_to_process = dedup.find_first_unique_article(articles, processed_urls)
     if not article_to_process:
-        print("Aucun nouvel article à traiter après filtrage des doublons. Arrêt.")
+        print("Aucun nouvel article à traiter. Arrêt.")
         return
 
-    # Étape 4 : Générer le résumé avec l'IA
+    # 2. Résumé
     title, summary = summarize.summarize_article(article_to_process.get('content', ''), CONFIG)
     if not title or not summary:
         print("Échec de la génération du résumé. Arrêt.")
         return
 
-    # Étape 5 : Extraire l'image de l'article source
+    # 3. Recherche d'image
     image_url = image_search.find_image_from_source(article_to_process.get('url'))
-    if not image_url:
-        print("Aucune image trouvée, on continue sans.")
 
-    # Étape 6 : Publier l'article et mettre à jour l'index
+    # 4. Publication
     result_message, article_title, article_url = github_pr.publish_article_and_update_index(title, summary, image_url, CONFIG)
 
-    # Étape 7 : Si la publication a réussi, mettre à jour la mémoire et tweeter
+    # 5. Post-publication
     if result_message:
+        # Sauvegarde en mémoire
         processed_urls.add(article_to_process['url'])
         dedup.save_processed_urls(processed_urls, CONFIG)
         print(f"Résultat final : {result_message}")
         
-        # On tweete le nouvel article
-        autotweet.post_tweet(article_title, article_url)
-    
+        # Tweet
+        autotweet.post_tweet(article_title, summary, article_url, CONFIG)
+
     print("--- Fin du cycle d'Aurore ---")
 
 if __name__ == "__main__":
