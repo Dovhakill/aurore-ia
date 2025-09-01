@@ -1,5 +1,3 @@
-# REMPLACER INTÉGRALEMENT LE CONTENU DE CE FICHIER
-
 import os
 import json
 import requests
@@ -8,18 +6,17 @@ def get_processed_urls(config):
     """Récupère les URLs déjà traitées depuis Netlify Blobs."""
     blob_key = config['blob_store_key']
     blobs_proxy_url = os.getenv('BLOBS_PROXY_URL')
-    aurore_blobs_token = os.getenv('AURORE_BLOBS_TOKEN')
+    auth_token = os.getenv('NETLIFY_AUTH_TOKEN')
 
-    if not blobs_proxy_url or not aurore_blobs_token:
+    if not blobs_proxy_url or not auth_token:
         print("Attention: Variables pour Netlify Blobs non configurées. La déduplication sera désactivée.")
         return set()
 
     print(f"Récupération des URLs traitées depuis le store '{blob_key}'...")
     try:
-        headers = {'Authorization': f'Bearer {aurore_blobs_token}'}
+        headers = {'Authorization': f'Bearer {auth_token}'}
         res = requests.get(f"{blobs_proxy_url}/{blob_key}", headers=headers, timeout=10)
         if res.status_code == 404:
-            print("Aucun store trouvé, création d'un nouveau set d'URLs.")
             return set()
         res.raise_for_status()
         return set(res.json())
@@ -31,15 +28,15 @@ def save_processed_urls(urls_set, config):
     """Sauvegarde le set d'URLs mis à jour dans Netlify Blobs."""
     blob_key = config['blob_store_key']
     blobs_proxy_url = os.getenv('BLOBS_PROXY_URL')
-    aurore_blobs_token = os.getenv('AURORE_BLOBS_TOKEN')
+    auth_token = os.getenv('NETLIFY_AUTH_TOKEN')
 
-    if not blobs_proxy_url or not aurore_blobs_token:
+    if not blobs_proxy_url or not auth_token:
         return
 
     print(f"Sauvegarde de {len(urls_set)} URLs dans le store '{blob_key}'...")
     try:
         headers = {
-            'Authorization': f'Bearer {aurore_blobs_token}',
+            'Authorization': f'Bearer {auth_token}',
             'Content-Type': 'application/json'
         }
         res = requests.put(
