@@ -1,59 +1,47 @@
 import os
-import json
 import requests
+import json
 
-def get_processed_urls(config):
-    """Récupère les URLs déjà traitées depuis Netlify Blobs."""
-    blob_key = config['blob_store_key']
-    blobs_proxy_url = os.getenv('BLOBS_PROXY_URL')
-    auth_token = os.getenv('NETLIFY_AUTH_TOKEN')
+# ... (le reste de tes imports et la fonction get_processed_urls)
 
-    if not blobs_proxy_url or not auth_token:
-        print("Attention: Variables pour Netlify Blobs non configurées. La déduplication sera désactivée.")
-        return set()
+def save_processed_urls(urls_to_save, config):
+    """
+    Sauvegarde la liste complète des URLs traitées dans Netlify Blobs.
+    """
+    blob_store_url = f"https://api.netlify.com/api/v1/sites/{os.environ['NETLIFY_SITE_ID']}/blobs/aurore-dedup-store"
+    headers = {
+        "Authorization": f"Bearer {os.environ['NETLIFY_BLOBS_TOKEN']}"
+    }
 
-    print(f"Récupération des URLs traitées depuis le store '{blob_key}'...")
+    # Convertir le set en liste pour la sérialisation JSON
+    data_payload = list(urls_to_save)
+
+    print("--- Début de la sauvegarde dans Netlify Blobs ---")
+    print(f"URL du store: {blob_store_url}")
+    print(f"Nombre d'URLs à sauvegarder: {len(data_payload)}")
+
     try:
-        headers = {'Authorization': f'Bearer {auth_token}'}
-        res = requests.get(f"{blobs_proxy_url}/{blob_key}", headers=headers, timeout=10)
-        if res.status_code == 404:
-            return set()
-        res.raise_for_status()
-        return set(res.json())
-    except requests.RequestException as e:
-        print(f"Erreur de communication avec Netlify Blobs (get) : {e}")
-        return set()
-
-def save_processed_urls(urls_set, config):
-    """Sauvegarde le set d'URLs mis à jour dans Netlify Blobs."""
-    blob_key = config['blob_store_key']
-    blobs_proxy_url = os.getenv('BLOBS_PROXY_URL')
-    auth_token = os.getenv('NETLIFY_AUTH_TOKEN')
-
-    if not blobs_proxy_url or not auth_token:
-        return
-
-    print(f"Sauvegarde de {len(urls_set)} URLs dans le store '{blob_key}'...")
-    try:
-        headers = {
-            'Authorization': f'Bearer {auth_token}',
-            'Content-Type': 'application/json'
-        }
-        res = requests.put(
-            f"{blobs_proxy_url}/{blob_key}",
+        # Nous utilisons une requête PUT pour écraser la clé avec les nouvelles données
+        response = requests.put(
+            f"{blob_store_url}/processed_urls",
             headers=headers,
-            data=json.dumps(list(urls_set)),
-            timeout=10
+            json=data_payload
         )
-        res.raise_for_status()
-        print("Sauvegarde réussie.")
-    except requests.RequestException as e:
-        print(f"Erreur de communication avec Netlify Blobs (save) : {e}")
 
-def find_first_unique_article(articles, processed_urls_set):
-    """Trouve le premier article qui n'a pas encore été traité."""
-    for article in articles:
-        if article.get('url') not in processed_urls_set:
-            print(f"Nouvel article trouvé : {article['title']}")
-            return article
-    return None
+        # Lève une exception si la requête a échoué (status code 4xx ou 5xx)
+        response.raise_for_status() 
+
+        print(">>> SUCCÈS: Les URLs ont été sauvegardées avec succès dans Netlify Blobs.")
+        print(f"Status Code: {response.status_code}")
+
+    except requests.exceptions.RequestException as e:
+        print(">>> ERREUR CRITIQUE: Échec de la sauvegarde dans Netlify Blobs.")
+        if e.response is not None:
+            print(f"Status Code: {e.response.status_code}")
+            print(f"Réponse de l'API: {e.response.text}")
+        else:
+            print(f"Erreur de connexion: {e}")
+        # On pourrait vouloir arrêter le script ici pour éviter des actions futures
+        # basées sur une sauvegarde échouée. Pour l'instant, on log l'erreur.
+
+    print("--- Fin de la sauvegarde dans Netlify Blobs ---")
