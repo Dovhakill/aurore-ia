@@ -58,6 +58,8 @@ jobs:
           TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
           TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
         run: |
+          set -e # Force le job à échouer si une commande plante
+          
           # Si le workflow a été lancé manuellement, on utilise la config fournie
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             python -m src.aurore --config ${{ github.event.inputs.config }}
