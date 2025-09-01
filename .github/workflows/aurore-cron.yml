@@ -1,41 +1,72 @@
-name: Aurore Article Generation
+# Nom du workflow qui apparaîtra dans l'onglet "Actions" de GitHub
+name: Aurore Cron
 
+# Déclencheurs du workflow
 on:
+  # Permet de lancer manuellement le workflow depuis l'interface GitHub
   workflow_dispatch:
+    inputs:
+      config:
+        description: 'Configuration à exécuter (ex: libre ou tech)'
+        required: true
+        type: string
+
+  # Exécution programmée
   schedule:
+    # Toutes les heures, à la minute 0
     - cron: '0 * * * *'
 
+# Définition des jobs à exécuter
 jobs:
-  build:
+  run-aurore:
+    # Le type de machine sur laquelle le job va s'exécuter
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        config: [libre, tech]
 
-    env:
-      GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      BLOBS_PROXY_URL: ${{ secrets.BLOBS_PROXY_URL }}
-      TWITTER_CONSUMER_KEY: ${{ secrets.TWITTER_CONSUMER_KEY }}
-      TWITTER_CONSUMER_SECRET: ${{ secrets.TWITTER_CONSUMER_SECRET }}
-      TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
-      TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+    # Permissions pour le GITHUB_TOKEN
+    # On applique le principe de moindre privilège.
+    # Le bot a seulement besoin d'écrire le contenu (articles + index).
+    permissions:
+      contents: write
 
+    # Séquence des étapes à exécuter
     steps:
+      # Étape 1 : Récupérer le code du dépôt aurore-ia
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Étape 2 : Configurer l'environnement Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: '3.10'
 
+      # Étape 3 : Installer les dépendances du projet
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Run Aurore Bot for ${{ matrix.config }}
-        run: python -m src.aurore --config ${{ matrix.config }}
+      # Étape 4 : Exécuter le script d'Aurore pour chaque verticale
+      # On utilise une "matrix strategy" pour lancer un job par configuration définie ici.
+      # C'est plus propre et ça isole les exécutions.
+      - name: Run Aurore IA
+        env:
+          # Passage des secrets au script via les variables d'environnement
+          GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NETLIFY_BLOBS_TOKEN: ${{ secrets.NETLIFY_BLOBS_TOKEN }}
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET_KEY: ${{ secrets.TWITTER_API_SECRET_KEY }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+          TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
+        run: |
+          # Si le workflow a été lancé manuellement, on utilise la config fournie
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            python -m src.aurore --config ${{ github.event.inputs.config }}
+          # Sinon (cron), on lance les deux configs l'une après l'autre
+          else
+            python -m src.aurore --config libre
+            python -m src.aurore --config tech
+          fi
