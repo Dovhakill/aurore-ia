@@ -13,21 +13,6 @@ from . import image_search
 from . import autotweet
 
 def main():
-       # BLOC DE DÉBOGAGE DES SECRETS
-    print("--- VÉRIFICATION DES SECRETS DANS L'ENVIRONNEMENT ---")
-    secrets_to_check = [
-        "GNEWS_API_KEY", "GEMINI_API_KEY", "GITHUB_TOKEN",
-        "NETLIFY_BLOBS_TOKEN", "NETLIFY_SITE_ID", "TWITTER_API_KEY",
-        "TWITTER_API_SECRET_KEY", "TWITTER_ACCESS_TOKEN",
-        "TWITTER_ACCESS_TOKEN_SECRET", "TWITTER_BEARER_TOKEN"
-    ]
-    for secret in secrets_to_check:
-        if os.getenv(secret):
-            print(f"[✅] {secret} : Trouvé.")
-        else:
-            print(f"[❌] {secret} : MANQUANT.")
-    print("----------------------------------------------------")
-    # FIN DU BLOC DE DÉBOGAGE
     """Fonction principale orchestrant la génération d'un article et sa publication."""
     print(f"--- Lancement d'Aurore ({datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}) ---")
     
