@@ -11,7 +11,7 @@ on:
         required: true
         type: string
 
-  # Exécution programmée (actuellement désactivée, à activer post-lancement)
+  # Exécution programmée (à activer après la validation finale)
   # schedule:
   #   - cron: '0 * * * *' # Exécution toutes les heures
 
