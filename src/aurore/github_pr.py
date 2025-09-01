@@ -2,26 +2,26 @@
 import os
 import sys
 import datetime
-# import locale # <- On retire cette dépendance
 from github import Github, GithubException
 from jinja2 import Environment, FileSystemLoader
 from bs4 import BeautifulSoup
 
-# La ligne "locale.setlocale" est supprimée.
-
 def slugify(text):
-    """Crée un slug simple pour les noms de fichiers."""
     text = text.lower()
     return "".join(c if c.isalnum() else '-' for c in text).strip('-')
 
 def get_existing_articles(repo):
-    """Scanne le dossier 'articles' du dépôt et en extrait les métadonnées."""
-    print("Scan des articles existants dans le dépôt...")
+    print("Scan des articles existants via l'arbre Git...")
     articles = []
     try:
-        contents = repo.get_contents("articles")
-        for content_file in contents:
-            file_content = content_file.decoded_content.decode('utf-8')
+        branch = repo.get_branch("main")
+        tree = repo.get_git_tree(branch.commit.sha, recursive=True).tree
+        
+        article_files = [item for item in tree if item.path.startswith('articles/') and item.path.endswith('.html')]
+        print(f"{len(article_files)} fichiers d'articles trouvés dans l'arbre Git.")
+
+        for item in article_files:
+            file_content = repo.get_contents(item.path).decoded_content.decode('utf-8')
             soup = BeautifulSoup(file_content, 'html.parser')
             
             title_tag = soup.find('meta', property='og:title')
@@ -33,18 +33,14 @@ def get_existing_articles(repo):
                 articles.append({
                     'title': title_tag['content'],
                     'iso_date': iso_date_str,
-                    # On utilise un format numérique simple et robuste
                     'date_human': datetime.datetime.fromisoformat(iso_date_str).strftime('%d/%m/%Y'),
-                    'filename': content_file.name,
+                    'filename': os.path.basename(item.path),
                     'image_url': image_tag['content'] if image_tag else None,
                 })
     except GithubException as e:
-        if e.status == 404:
-            print("Le dossier 'articles' n'existe pas encore. On commence avec une liste vide.")
-            return []
-        else:
-            raise e
-    print(f"{len(articles)} articles existants trouvés.")
+        print(f"Impossible de scanner les articles existants : {e}")
+        return []
+        
     return articles
 
 def publish_article_and_update_index(title, summary, image_url, config):
@@ -66,17 +62,11 @@ def publish_article_and_update_index(title, summary, image_url, config):
             summary=summary, 
             image_url=image_url,
             iso_date=now.isoformat(),
-            # On utilise un format numérique simple et robuste
             date_human=now.strftime('%d/%m/%Y'),
             brand_color=config['brand_color']
         )
 
-        repo.create_file(
-            f"articles/{filename}",
-            f"feat: Ajout de l'article '{title}'",
-            article_html,
-            branch="main"
-        )
+        repo.create_file(f"articles/{filename}", f"feat: Ajout de l'article '{title}'", article_html, branch="main")
         print(f"Nouvel article '{filename}' publié avec succès.")
 
         articles_list = get_existing_articles(repo)
@@ -99,7 +89,7 @@ def publish_article_and_update_index(title, summary, image_url, config):
                 repo.create_file("index.html", "feat: Création de la page d'accueil", index_html, branch="main")
                 print("Page d'accueil (index.html) créée.")
 
-        article_url = f"https://{repo_name.split('/')[1]}.netlify.app/articles/{filename}"
+        article_url = f"{config['production_url']}/articles/{filename}"
         return "Article et index publiés.", title, article_url
 
     except KeyError as e:
