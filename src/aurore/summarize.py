@@ -1,5 +1,6 @@
 import os
 import re
+import sys  # <--- IMPORT AJOUTÉ
 import google.generativeai as genai
 
 def parse_gemini_response(response_text):
@@ -22,7 +23,7 @@ def summarize_article(article_content, config):
     if not article_content:
         print("Le contenu de l'article est vide, impossible de résumer.")
         return None, None
-            
+        
     print("Génération du résumé avec Gemini...")
     try:
         gemini_api_key = os.environ["GEMINI_API_KEY"]
@@ -43,7 +44,7 @@ def summarize_article(article_content, config):
 
     except KeyError:
         print("Erreur critique : Le secret GEMINI_API_KEY est manquant.")
-        return None, None
+        sys.exit(1) # <--- ON FORCE L'ÉCHEC DU WORKFLOW ICI
     except Exception as e:
         print(f"Erreur critique lors de la génération du résumé : {e}")
-        return None, None
+        sys.exit(1) # <--- ON FORCE L'ÉCHEC DU WORKFLOW ICI
