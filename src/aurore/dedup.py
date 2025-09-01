@@ -1,10 +1,23 @@
 import os
 import requests
 import json
-from typing import Set
+from typing import Set, Dict, Optional
 
 # La clé unique sous laquelle nous stockons la liste des URLs dans le store
 BLOB_KEY = "processed_urls"
+
+def find_first_unique_article(articles: list, processed_urls: Set[str]) -> Optional[Dict]:
+    """
+    Parcourt la liste des articles et retourne le premier dont l'URL n'est pas
+    dans le set des URLs déjà traitées.
+    """
+    print(f"Recherche d'un article unique parmi {len(articles)} articles trouvés...")
+    for article in articles:
+        if article['url'] not in processed_urls:
+            print(f"Article unique trouvé : {article['title']}")
+            return article
+    print("Aucun nouvel article unique trouvé dans ce lot.")
+    return None
 
 def get_processed_urls(config: dict) -> Set[str]:
     """
@@ -19,15 +32,11 @@ def get_processed_urls(config: dict) -> Set[str]:
     print("--- Début de la lecture depuis Netlify Blobs ---")
     try:
         response = requests.get(f"{blob_store_url}/{BLOB_KEY}", headers=headers)
-
-        # Si la clé n'existe pas (premier run), Netlify renvoie un 404. C'est normal.
         if response.status_code == 404:
             print("Aucune liste d'URLs existante trouvée. Démarrage avec une mémoire vide.")
             return set()
         
-        # Lève une exception pour les autres erreurs (5xx, 401, etc.)
         response.raise_for_status()
-        
         processed_list = response.json()
         print(f">>> SUCCÈS: {len(processed_list)} URLs récupérées depuis la mémoire.")
         return set(processed_list)
@@ -39,12 +48,9 @@ def get_processed_urls(config: dict) -> Set[str]:
             print(f"Réponse de l'API: {e.response.text}")
         else:
             print(f"Erreur de connexion: {e}")
-        # En cas d'échec, on retourne un set vide pour ne pas bloquer le run,
-        # mais on est conscient du risque de créer un doublon.
         return set()
     finally:
         print("--- Fin de la lecture depuis Netlify Blobs ---")
-
 
 def save_processed_urls(urls_to_save: Set[str], config: dict):
     """
@@ -54,21 +60,16 @@ def save_processed_urls(urls_to_save: Set[str], config: dict):
     headers = {
         "Authorization": f"Bearer {os.environ['NETLIFY_BLOBS_TOKEN']}"
     }
-    
-    # Convertir le set en liste pour la sérialisation JSON
     data_payload = list(urls_to_save)
 
     print("--- Début de la sauvegarde dans Netlify Blobs ---")
     try:
-        # Nous utilisons une requête PUT pour créer ou écraser la clé avec les nouvelles données
         response = requests.put(
             f"{blob_store_url}/{BLOB_KEY}",
             headers=headers,
             json=data_payload
         )
-        
         response.raise_for_status() 
-        
         print(f">>> SUCCÈS: {len(data_payload)} URLs sauvegardées avec succès dans Netlify Blobs.")
 
     except requests.exceptions.RequestException as e:
