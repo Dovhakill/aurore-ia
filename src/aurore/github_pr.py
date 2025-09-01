@@ -57,13 +57,20 @@ def publish_article_and_update_index(title, summary, image_url, config):
         
         env = Environment(loader=FileSystemLoader('templates'))
         article_template = env.get_template('article.html.j2')
+        
+        # --- CORRECTION DU FORMATAGE ---
+        # On transforme les sauts de ligne en balises <br>
+        summary_html = summary.replace('\n', '<br>')
+        
         article_html = article_template.render(
             title=title, 
-            summary=summary, 
+            summary=summary_html, # <-- On utilise la variable corrigée
             image_url=image_url,
             iso_date=now.isoformat(),
             date_human=now.strftime('%d/%m/%Y'),
-            brand_color=config['brand_color']
+            brand_color=config['brand_color'],
+            production_url=config['production_url'],
+            filename=filename
         )
 
         repo.create_file(f"articles/{filename}", f"feat: Ajout de l'article '{title}'", article_html, branch="main")
