@@ -2,6 +2,7 @@
   "libre": {
     "gnews_query": "(élections OR gouvernement OR politique OR société) AND (France OR Europe)",
     "site_repo_name": "Dovhakill/horizon-libre-site",
+    "production_url": "https://horizon-libre.net",
     "brand_name": "Libre",
     "brand_color": "#2563EB",
     "logo_filename": "logo-libre.png",
@@ -12,6 +13,7 @@
   "tech": {
     "gnews_query": "(\"intelligence artificielle\" OR IA OR cybersécurité OR web3 OR innovation technologique) NOT (crypto OR bitcoin)",
     "site_repo_name": "Dovhakill/horizon-tech-site",
+    "production_url": "https://fabulous-bubblegum-90f5c8.netlify.app",
     "brand_name": "Tech",
     "brand_color": "#22C55E",
     "logo_filename": "logo-tech.png",
