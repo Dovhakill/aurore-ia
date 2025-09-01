@@ -29,7 +29,8 @@
     {% endif %}
 
     <div class="prose lg:prose-xl max-w-none text-gray-800">
-        <p>{{ summary | nl2br }}</p>
+        {# On utilise la balise "safe" pour que les <br> soient interprétées comme du HTML #}
+        <p>{{ summary | safe }}</p>
     </div>
 
     <hr class="my-12">
