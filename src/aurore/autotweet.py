@@ -1,17 +1,36 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import tweepy
+import google.generativeai as genai
 
-def post_tweet(article_title, article_url):
+def generate_tweet_text(title, summary, config):
+    """Génère le texte du tweet en utilisant Gemini."""
+    print("Génération du texte du tweet avec Gemini...")
+    try:
+        gemini_api_key = os.environ["GEMINI_API_KEY"]
+        genai.configure(api_key=gemini_api_key)
+        
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = config['gemini_tweet_prompt'] + f"\n\nTITRE: {title}\n\nRÉSUMÉ: {summary}"
+        
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"Erreur lors de la génération du tweet : {e}")
+        return f"{title}\n\n{config['site_repo_name']}" # Fallback simple
+
+def post_tweet(article_title, article_summary, article_url, config):
     print("Publication du tweet...")
     try:
-        # Vérification de toutes les clés nécessaires
         consumer_key = os.environ['TWITTER_API_KEY']
         consumer_secret = os.environ['TWITTER_API_SECRET_KEY']
         access_token = os.environ['TWITTER_ACCESS_TOKEN']
         access_token_secret = os.environ['TWITTER_ACCESS_TOKEN_SECRET']
         
-        # Authentification avec Tweepy v1 (API v2)
+        tweet_text = generate_tweet_text(article_title, article_summary, config)
+        final_tweet = f"{tweet_text}\n\nLien vers l'analyse complète :\n{article_url}"
+
         client = tweepy.Client(
             consumer_key=consumer_key,
             consumer_secret=consumer_secret,
@@ -19,14 +38,12 @@ def post_tweet(article_title, article_url):
             access_token_secret=access_token_secret
         )
         
-        tweet_text = f"Nouvel article sur {os.getenv('VERTICAL_NAME', 'Horizon')}: {article_title}\n\n{article_url}"
-        
-        response = client.create_tweet(text=tweet_text)
+        response = client.create_tweet(text=final_tweet)
         print(f"Tweet posté avec succès: https://x.com/user/status/{response.data['id']}")
 
     except KeyError as e:
         print(f"Erreur critique : Le secret Twitter {e} est manquant.")
-        sys.exit(1) # Force l'échec du workflow
+        sys.exit(1)
     except Exception as e:
         print(f"Erreur inattendue lors de la publication du tweet : {e}")
         sys.exit(1)
