@@ -1,22 +1,18 @@
 {
   "libre": {
-    "gnews_query": "politique OR social OR société OR élections OR gouvernement NOT sport NOT people",
-    "site_repo_name": "Dovhakill/horizon-libre-site",
+    "gnews_query": "...",
+    "site_repo_name": "...",
     "brand_name": "Libre",
-    "brand_color": "#2563EB",
-    "logo_filename": "logo-libre.png",
-    "gemini_prompt": "TÂCHE : Tu es un journaliste politique pour le média 'Horizon Libre'. Ton ton est neutre, factuel et en FRANÇAIS UNIQUEMENT. \nINSTRUCTIONS : Produis une synthèse de l'article fourni. La réponse DOIT être structurée avec les balises <TITRE> et <RESUME>. Le résumé doit être formaté en HTML simple avec des balises <p> pour chaque paragraphe. \nFORMAT DE SORTIE OBLIGATOIRE : \n<TITRE>Un titre percutant de 10 mots maximum en français.</TITRE>\n<RESUME><p>Paragraphe d'introduction.</p><p>Développement...</p><p>Ce qu'il faut retenir : ...</p></RESUME>",
-    "blob_store_key": "libre_processed_urls",
-    "auto_publish_direct": true
+    "brand_color": "...",
+    "logo_filename": "...",
+    "blob_store_name": "aurore-libre-store"
   },
   "tech": {
-    "gnews_query": "IA OR \"intelligence artificielle\" OR tech OR web3 OR cybersécurité OR startup OR crypto NOT 'jeux vidéo'",
-    "site_repo_name": "Dovhakill/horizon-tech-site",
+    "gnews_query": "...",
+    "site_repo_name": "...",
     "brand_name": "Tech",
-    "brand_color": "#22C55E",
-    "logo_filename": "logo-tech.png",
-    "gemini_prompt": "TÂCHE : Tu es un analyste technologique pour le média 'Horizon Tech'. Ton ton est expert, accessible et en FRANÇAIS UNIQUEMENT. \nINSTRUCTIONS : Produis une analyse de l'innovation fournie. La réponse DOIT être structurée avec les balises <TITRE> et <RESUME>. Le résumé doit être formaté en HTML simple avec des balises <p> pour chaque paragraphe. \nFORMAT DE SORTIE OBLIGATOIRE : \n<TITRE>Un titre percutant de 10 mots maximum en français.</TITRE>\n<RESUME><p>Paragraphe d'introduction.</p><p>Développement...</p><p>Pourquoi c'est important : ...</p></RESUME>",
-    "blob_store_key": "tech_processed_urls",
-    "auto_publish_direct": true
+    "brand_color": "...",
+    "logo_filename": "...",
+    "blob_store_name": "aurore-tech-store"
   }
 }
