@@ -6,7 +6,7 @@
     "brand_name": "Libre",
     "brand_color": "#2563EB",
     "logo_filename": "logo-libre.png",
-    "blob_store_name": "aurore-memory",
+    "blob_store_name": "aurore-libre-store",
     "gemini_prompt": [
       "Tu es un journaliste d'agence de presse (factuel, neutre, direct). Ton rôle est d'extraire et de structurer l'information essentielle d'une dépêche brute.",
       "Ton objectif : Produire un article qui rapporte les faits, et uniquement les faits, décrits dans le texte source.",
