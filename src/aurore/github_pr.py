@@ -37,7 +37,7 @@ def get_existing_articles(repo):
                     })
             except Exception as e:
                 print(f"AVERTISSEMENT: Impossible de parser le fichier {file.path}. Erreur: {e}")
-                continue # On ignore ce fichier et on continue
+                continue
                 
     except GithubException as e:
         if e.status == 404: 
@@ -52,7 +52,8 @@ def get_existing_articles(repo):
 
 def publish_article_and_update_index(title, summary, image_url, config):
     try:
-        token = os.environ['A_GH_TOKEN'] # Utilisation du bon token
+        # LA CORRECTION EST ICI. On cherche GITHUB_TOKEN, comme défini dans le workflow.
+        token = os.environ['GITHUB_TOKEN'] 
         repo_name = config['site_repo_name']
         g = Github(token)
         repo = g.get_repo(repo_name)
