@@ -12,13 +12,16 @@ def generate_tweet_text(title, summary, config):
         genai.configure(api_key=gemini_api_key)
         
         model = genai.GenerativeModel('gemini-1.5-flash')
-        prompt = config['gemini_tweet_prompt'] + f"\n\nTITRE: {title}\n\nRÉSUMÉ: {summary}"
+
+        # On assemble le prompt multi-lignes depuis la config
+        prompt_text = "".join(config['gemini_tweet_prompt'])
+        prompt = prompt_text + f"\n\nTITRE: {title}\n\nRÉSUMÉ: {summary}"
         
         response = model.generate_content(prompt)
         return response.text.strip()
     except Exception as e:
         print(f"Erreur lors de la génération du tweet : {e}")
-        return f"{title}\n\n{config['site_repo_name']}" # Fallback simple
+        return f"{title}"
 
 def post_tweet(article_title, article_summary, article_url, config):
     print("Publication du tweet...")
