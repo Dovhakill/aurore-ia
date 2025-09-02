@@ -1,49 +1,46 @@
 {% extends "base.html.j2" %}
-{% block title %}{{ brand_name }} - Horizon Network{% endblock %}
+
+{% block title %}{{ title }} - {{ brand_name }} - Horizon Network{% endblock %}
+
+{% block meta_tags %}
+    <meta name="description" content="{{ summary[:160] | striptags }}">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="{{ production_url }}/articles/{{ filename }}">
+    <meta property="og:title" content="{{ title }}">
+    <meta property="og:description" content="{{ summary[:160] | striptags }}">
+    {% if image_url and image_url != 'None' %}<meta property="og:image" content="{{ image_url }}">{% endif %}
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="{{ production_url }}/articles/{{ filename }}">
+    <meta property="twitter:title" content="{{ title }}">
+    <meta property="twitter:description" content="{{ summary[:160] | striptags }}">
+    {% if image_url and image_url != 'None' %}<meta property="twitter:image" content="{{ image_url }}">{% endif %}
+{% endblock %}
+
 {% block content %}
-    {% if articles %}
-    <section id="hero">
-        <h2 class="text-3xl font-bold mb-6 border-l-4 pl-4" style="border-color: {{ brand_color }};">À la une</h2>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            <div class="order-2 lg:order-1">
-                <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mt-2 mb-4 leading-tight">{{ articles[0].title }}</h1>
-                <p class="text-gray-500 text-sm mb-4">{{ articles[0].date_human }}</p>
-                <a href="articles/{{ articles[0].filename }}" class="inline-flex items-center font-semibold group" style="color: {{ brand_color }};">Lire l'analyse</a>
-            </div>
-            <div class="order-1 lg:order-2">
-                <a href="articles/{{ articles[0].filename }}">
-                {% if articles[0].image_url and articles[0].image_url != 'None' %}
-                    <img src="{{ articles[0].image_url }}" alt="{{ articles[0].title }}" class="rounded-lg shadow-xl w-full h-auto object-cover">
-                {% else %}
-                    <div class="rounded-lg shadow-xl w-full h-64 bg-gray-200"></div>
-                {% endif %}
-                </a>
-            </div>
-        </div>
-    </section>
+<article class="max-w-4xl mx-auto py-8 px-4">
+    
+    <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">{{ title }}</h1>
+    <p class="text-gray-500 text-sm mb-6">{{ date_human }}</p>
+
+    {% if image_url and image_url != 'None' %}
+    <div class="mb-8">
+        <img src="{{ image_url }}" alt="{{ title }}" class="rounded-lg shadow-xl w-full h-auto object-cover">
+    </div>
     {% endif %}
 
-    {% if articles and articles|length > 1 %}
-    <section id="recent-articles" class="mt-16">
-        <h2 class="text-3xl font-bold mb-8 border-l-4 pl-4" style="border-color: {{ brand_color }};">Nos derniers articles</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {% for article in articles[1:] %}
-            <div class="bg-white rounded-lg shadow-md">
-                <a href="articles/{{ article.filename }}">
-                {% if article.image_url and article.image_url != 'None' %}
-                    <img src="{{ article.image_url }}" alt="{{ article.title }}" class="h-48 w-full object-cover">
-                {% else %}
-                     <div class="h-48 w-full bg-gray-200"></div>
-                {% endif %}
-                </a>
-                <div class="p-6">
-                    <h3 class="font-bold text-xl mt-2 mb-3">{{ article.title }}</h3>
-                    <p class="text-gray-500 text-xs mb-3">{{ article.date_human }}</p>
-                    <a href="articles/{{ article.filename }}" class="text-sm font-semibold" style="color: {{ brand_color }};">Lire la suite</a>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </section>
-    {% endif %}
+    <div class="prose lg:prose-xl max-w-none text-gray-800">
+        <p>{{ summary | safe }}</p>
+    </div>
+
+    <hr class="my-12">
+
+    <div class="bg-gray-100 border-l-4 p-4 rounded" style="border-color: {{ brand_color }};">
+        <h4 class="font-bold text-lg">À propos de cet article</h4>
+        <p class="text-sm text-gray-700 mt-2">
+            Ce contenu a été synthétisé et généré par <strong>Aurore</strong>, une intelligence artificielle du réseau Horizon. Notre mission est de fournir une information factuelle et neutre, certifiée par un processus transparent et automatisé. 
+            <a href="/a-propos.html" class="underline" style="color: {{ brand_color }};">En savoir plus sur notre démarche.</a>
+        </p>
+    </div>
+
+</article>
 {% endblock %}
