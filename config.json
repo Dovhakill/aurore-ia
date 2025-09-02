@@ -7,7 +7,7 @@
     "brand_color": "#2563EB",
     "logo_filename": "logo-libre.png",
     "blob_store_name": "aurore-libre-store",
-    "gemini_prompt": "Voici un article de presse. Crée un titre percutant et un résumé neutre et factuel de 3 paragraphes. Le format de ta réponse doit être exclusivement : <TITRE>Ton titre</TITRE><RESUME>Ton résumé.</RESUME>",
+    "gemini_prompt": "Tu es un journaliste senior spécialisé dans l'analyse politique et sociétale. Ton rôle est de transformer une dépêche brute en article informatif et engageant. Ton objectif : Créer un article qui apporte une vraie valeur ajoutée au lecteur. CONSIGNES : 1. TITRE : Percutant, informatif, sans clickbait. Maximum 80 caractères pour le SEO. 2. RÉSUMÉ : 4 paragraphes structurés : - Paragraphe 1 : Les faits essentiels (Qui, Quoi, Quand, Où) - Paragraphe 2 : Le contexte et les enjeux (Pourquoi c'est important) - Paragraphe 3 : Les implications et conséquences possibles - Paragraphe 4 : Les réactions et prochaines étapes. STYLE : Neutre mais pas ennuyeux. Factuel mais accessible. Évite le jargon. LONGUEUR : 250-300 mots au total. FORMAT DE RÉPONSE OBLIGATOIRE : <TITRE>Ton titre optimisé</TITRE><RESUME>Ton article structuré en 4 paragraphes.</RESUME>",
     "gemini_tweet_prompt": "Basé sur ce titre et ce résumé, écris un tweet percutant de moins de 280 caractères. Utilise un ton neutre mais engageant. Termine par une question ouverte pour susciter le débat. Ajoute 3 hashtags pertinents. Ne dis pas 'nouvel article'."
   },
   "tech": {
