@@ -2,7 +2,7 @@
 import os
 import sys
 import datetime
-from github import Github, GithubException, InputGitTreeElement
+from github import Github, GithubException
 from jinja2 import Environment, FileSystemLoader
 from bs4 import BeautifulSoup
 
@@ -46,10 +46,31 @@ def publish_article_and_update_index(title, summary, image_url, config):
         now = datetime.datetime.now()
         slug = slugify(title)
         filename = f"{now.strftime('%Y-%m-%d')}-{slug}.html"
+        
+        # --- NOUVELLE LOGIQUE ---
 
+        # 1. On récupère les anciens articles AVANT de publier le nouveau
+        existing_articles = get_existing_articles(repo)
+
+        # 2. On prépare le nouvel article "en mémoire"
+        new_article_data = {
+            'title': title,
+            'iso_date': now.isoformat(),
+            'date_human': now.strftime('%d/%m/%Y'),
+            'filename': filename,
+            'image_url': image_url,
+            'summary_preview': summary.split('.')[0] # Prend la première phrase pour l'aperçu
+        }
+
+        # 3. On crée la liste complète et à jour
+        all_articles = [new_article_data] + existing_articles
+        all_articles.sort(key=lambda x: x['iso_date'], reverse=True)
+        latest_articles = all_articles[:10]
+
+        # 4. On génère les fichiers HTML
         env = Environment(loader=FileSystemLoader('templates'))
-
-        # Rendu et création du nouvel article
+        
+        # HTML de l'article
         summary_html = summary.replace('\n', '<br>')
         article_template = env.get_template('article.html.j2')
         article_html = article_template.render(
@@ -57,20 +78,18 @@ def publish_article_and_update_index(title, summary, image_url, config):
             iso_date=now.isoformat(), date_human=now.strftime('%d/%m/%Y'),
             brand_color=config['brand_color'], production_url=config['production_url'], filename=filename
         )
-        repo.create_file(f"articles/{filename}", f"feat: Ajout de l'article '{title}'", article_html, branch="main")
-        print(f"Nouvel article '{filename}' publié.")
-
-        # Reconstruction de la liste des articles
-        all_articles = get_existing_articles(repo)
-        all_articles.sort(key=lambda x: x['iso_date'], reverse=True)
-        latest_articles = all_articles[:10]
-
-        # Rendu et mise à jour de l'index
+        
+        # HTML de l'index
         index_template = env.get_template('index.html.j2')
         index_html = index_template.render(articles=latest_articles, brand_name=config['brand_name'], brand_color=config['brand_color'])
 
+        # 5. On pousse les modifications sur GitHub
+        # Publier le nouvel article
+        repo.create_file(f"articles/{filename}", f"feat: Ajout de l'article '{title}'", article_html, branch="main")
+        print(f"Nouvel article '{filename}' publié.")
+
+        # Mettre à jour l'index
         try:
-            # Approche plus robuste pour la mise à jour
             contents = repo.get_contents("index.html", ref="main")
             repo.update_file(contents.path, "chore: Mise à jour de la page d'accueil", index_html, contents.sha, branch="main")
             print("Page d'accueil mise à jour.")
@@ -80,7 +99,7 @@ def publish_article_and_update_index(title, summary, image_url, config):
                 print("Page d'accueil créée.")
             else:
                 raise e
-
+        
         article_url = f"{config['production_url']}/articles/{filename}"
         return "Article et index publiés.", title, article_url
 
