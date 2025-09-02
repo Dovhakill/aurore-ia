@@ -4,8 +4,6 @@ import sys
 import datetime
 from github import Github, GithubException
 
-# --- NOTE : Jinja2 et BeautifulSoup ne sont plus nécessaires dans ce module si les templates sont gérés ailleurs ---
-# On les garde pour l'instant pour ne pas tout casser, mais on pourrait refactoriser.
 from jinja2 import Environment, FileSystemLoader
 from bs4 import BeautifulSoup
 
@@ -17,39 +15,44 @@ def get_existing_articles(repo):
     print("Scan des articles existants...")
     articles = []
     try:
-        # --- DÉBUT DU BLOC DE DÉBOGAGE ---
-        print("DEBUG: Tentative de lister le contenu du dossier 'articles'...")
         contents = repo.get_contents("articles")
-        print(f"DEBUG: Contenu brut reçu de get_contents('articles'): {contents}")
-        print(f"DEBUG: Type de l'objet contents: {type(contents)}")
-        # --- FIN DU BLOC DE DÉBOGAGE ---
-
+        print(f"DEBUG: {len(contents)} fichiers trouvés dans le dossier 'articles'.")
+        
         for file in contents:
-            file_content = file.decoded_content.decode('utf-8')
-            soup = BeautifulSoup(file_content, 'html.parser')
-            title_tag = soup.find('meta', property='og:title')
-            date_tag = soup.find('meta', property='article:published_time')
-            image_tag = soup.find('meta', property='og:image')
-            if title_tag and date_tag:
-                iso_date_str = date_tag['content']
-                articles.append({
-                    'title': title_tag['content'],
-                    'iso_date': iso_date_str,
-                    'date_human': datetime.datetime.fromisoformat(iso_date_str).strftime('%d/%m/%Y'),
-                    'filename': file.name,
-                    'image_url': image_tag['content'] if image_tag else None,
-                })
+            try:
+                file_content = file.decoded_content.decode('utf-8')
+                soup = BeautifulSoup(file_content, 'html.parser')
+                title_tag = soup.find('meta', property='og:title')
+                date_tag = soup.find('meta', property='article:published_time')
+                image_tag = soup.find('meta', property='og:image')
+
+                if title_tag and date_tag:
+                    iso_date_str = date_tag['content']
+                    articles.append({
+                        'title': title_tag['content'],
+                        'iso_date': iso_date_str,
+                        'date_human': datetime.datetime.fromisoformat(iso_date_str).strftime('%d/%m/%Y'),
+                        'filename': file.name,
+                        'image_url': image_tag['content'] if image_tag and image_tag.get('content') else None
+                    })
+            except Exception as e:
+                print(f"AVERTISSEMENT: Impossible de parser le fichier {file.path}. Erreur: {e}")
+                continue # On ignore ce fichier et on continue
+                
     except GithubException as e:
         if e.status == 404: 
-            print("DEBUG: Le dossier 'articles' n'a pas été trouvé (404), retour d'une liste vide.")
+            print("Le dossier 'articles' n'a pas été trouvé, on commence avec une liste vide.")
             return []
-        else: raise e
-    print(f"{len(articles)} articles existants trouvés.")
+        else:
+            print(f"Erreur GitHub lors du scan des articles: {e}")
+            sys.exit(1)
+            
+    print(f"{len(articles)} articles existants parsés avec succès.")
     return articles
 
 def publish_article_and_update_index(title, summary, image_url, config):
     try:
-        token = os.environ['GITHUB_TOKEN']
+        token = os.environ['A_GH_TOKEN'] # Utilisation du bon token
         repo_name = config['site_repo_name']
         g = Github(token)
         repo = g.get_repo(repo_name)
@@ -66,7 +69,7 @@ def publish_article_and_update_index(title, summary, image_url, config):
             'date_human': now.strftime('%d/%m/%Y'),
             'filename': filename,
             'image_url': image_url,
-            'summary_preview': summary.split('.')[0]
+            'summary_preview': summary.split('.')[0] + '.'
         }
 
         all_articles = [new_article_data] + existing_articles
