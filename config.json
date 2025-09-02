@@ -7,18 +7,44 @@
     "brand_color": "#2563EB",
     "logo_filename": "logo-libre.png",
     "blob_store_name": "aurore-libre-store",
-    "gemini_prompt": "Tu es un journaliste senior spécialisé dans l'analyse politique et sociétale. Ton rôle est de transformer une dépêche brute en article informatif et engageant. Ton objectif : Créer un article qui apporte une vraie valeur ajoutée au lecteur. CONSIGNES : 1. TITRE : Percutant, informatif, sans clickbait. Maximum 80 caractères pour le SEO. 2. RÉSUMÉ : 4 paragraphes structurés : - Paragraphe 1 : Les faits essentiels (Qui, Quoi, Quand, Où) - Paragraphe 2 : Le contexte et les enjeux (Pourquoi c'est important) - Paragraphe 3 : Les implications et conséquences possibles - Paragraphe 4 : Les réactions et prochaines étapes. STYLE : Neutre mais pas ennuyeux. Factuel mais accessible. Évite le jargon. LONGUEUR : 250-300 mots au total. FORMAT DE RÉPONSE OBLIGATOIRE : <TITRE>Ton titre optimisé</TITRE><RESUME>Ton article structuré en 4 paragraphes.</RESUME>",
+    "gemini_prompt": [
+      "Tu es un journaliste senior spécialisé dans l'analyse politique et sociétale. Ton rôle est de transformer une dépêche brute en article informatif et engageant.",
+      "Ton objectif : Créer un article qui apporte une vraie valeur ajoutée au lecteur.",
+      "CONSIGNES :",
+      "1. TITRE : Percutant, informatif, sans clickbait. Maximum 80 caractères pour le SEO.",
+      "2. RÉSUMÉ : 4 paragraphes structurés :",
+      "   - Paragraphe 1 : Les faits essentiels (Qui, Quoi, Quand, Où)",
+      "   - Paragraphe 2 : Le contexte et les enjeux (Pourquoi c'est important)",
+      "   - Paragraphe 3 : Les implications et conséquences possibles",
+      "   - Paragraphe 4 : Les réactions et prochaines étapes",
+      "STYLE : Neutre mais pas ennuyeux. Factuel mais accessible. Évite le jargon.",
+      "LONGUEUR : 250-300 mots au total.",
+      "FORMAT DE RÉPONSE OBLIGATOIRE : <TITRE>Ton titre optimisé</TITRE><RESUME>Ton article structuré en 4 paragraphes.</RESUME>"
+    ],
     "gemini_tweet_prompt": "Basé sur ce titre et ce résumé, écris un tweet percutant de moins de 280 caractères. Utilise un ton neutre mais engageant. Termine par une question ouverte pour susciter le débat. Ajoute 3 hashtags pertinents. Ne dis pas 'nouvel article'."
   },
   "tech": {
-    "gnews_query": "(\"intelligence artificielle\" OR IA OR cybersécurité OR web3 OR innovation technologique) NOT (crypto OR bitcoin)",
+    "gnews_query": "(\"intelligence artificielle\" OR IA OR cybersécurité OR innovation technologique) NOT (crypto OR bitcoin)",
     "site_repo_name": "Dovhakill/horizon-tech-site",
     "production_url": "https://fabulous-bubblegum-90f5c8.netlify.app",
     "brand_name": "Tech",
     "brand_color": "#22C55E",
     "logo_filename": "logo-tech.png",
     "blob_store_name": "aurore-tech-store",
-    "gemini_prompt": "Voici un article de presse technique. Crée un titre percutant et un résumé neutre et factuel de 3 paragraphes pour un public averti. Le format de ta réponse doit être exclusivement : <TITRE>Ton titre</TITRE><RESUME>Ton résumé.</RESUME>",
-    "gemini_tweet_prompt": "Basé sur ce titre et ce résumé tech, écris un tweet percutant de moins de 280 caractères. Utilise un ton informatif et visionnaire. Termine par une question ouverte technique. Ajoute 3 hashtags pertinents (#IA, #Web3, etc.)."
+    "gemini_prompt": [
+      "Tu es un journaliste tech senior spécialisé en IA et cybersécurité. Ton rôle est de transformer une news brute en une analyse claire et accessible pour un public averti.",
+      "Ton objectif : Expliquer l'importance d'une technologie ou d'un événement et ses implications futures.",
+      "CONSIGNES :",
+      "1. TITRE : Précis, technique mais compréhensible. Maximum 80 caractères.",
+      "2. RÉSUMÉ : 4 paragraphes structurés :",
+      "   - Paragraphe 1 : L'information essentielle (La technologie, l'entreprise, l'événement).",
+      "   - Paragraphe 2 : Le fonctionnement simplifié (Comment ça marche, quel est le problème résolu).",
+      "   - Paragraphe 3 : L'impact sur l'industrie et les utilisateurs.",
+      "   - Paragraphe 4 : Les perspectives et les défis à venir.",
+      "STYLE : Informatif, factuel et légèrement visionnaire. Utilise un langage précis.",
+      "LONGUEUR : 250-300 mots au total.",
+      "FORMAT DE RÉPONSE OBLIGATOIRE : <TITRE>Ton titre optimisé</TITRE><RESUME>Ton article structuré en 4 paragraphes.</RESUME>"
+    ],
+    "gemini_tweet_prompt": "Basé sur ce titre et ce résumé tech, écris un tweet percutant de moins de 280 caractères. Utilise un ton informatif et visionnaire. Termine par une question ouverte technique. Ajoute 3 hashtags pertinents (#IA, #Cybersecurite, etc.)."
   }
 }
