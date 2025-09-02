@@ -46,8 +46,7 @@ jobs:
       # Étape 4 : Exécuter le script d'Aurore
       - name: Run Aurore IA
         env:
-          # LA CORRECTION EST ICI : On crée la variable GITHUB_TOKEN à partir du secret A_GH_TOKEN
-          GITHUB_TOKEN: ${{ secrets.A_GH_TOKEN }} 
+          GITHUB_TOKEN: ${{ secrets.A_GH_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
           NETLIFY_BLOBS_TOKEN: ${{ secrets.NETLIFY_BLOBS_TOKEN }}
