@@ -3,7 +3,6 @@ import os
 import sys
 import datetime
 from github import Github, GithubException
-
 from jinja2 import Environment, FileSystemLoader
 from bs4 import BeautifulSoup
 
@@ -16,17 +15,20 @@ def get_existing_articles(repo):
     articles = []
     try:
         contents = repo.get_contents("articles")
-        print(f"DEBUG: {len(contents)} fichiers trouvés dans le dossier 'articles'.")
-        
+        print(f"Scan initial : {len(contents)} fichiers détectés dans /articles.")
         for file in contents:
             try:
+                # On s'assure de travailler sur des fichiers et non des dossiers
+                if file.type != 'file':
+                    continue
+                
                 file_content = file.decoded_content.decode('utf-8')
                 soup = BeautifulSoup(file_content, 'html.parser')
                 title_tag = soup.find('meta', property='og:title')
                 date_tag = soup.find('meta', property='article:published_time')
                 image_tag = soup.find('meta', property='og:image')
 
-                if title_tag and date_tag:
+                if title_tag and title_tag.get('content') and date_tag and date_tag.get('content'):
                     iso_date_str = date_tag['content']
                     articles.append({
                         'title': title_tag['content'],
@@ -38,7 +40,6 @@ def get_existing_articles(repo):
             except Exception as e:
                 print(f"AVERTISSEMENT: Impossible de parser le fichier {file.path}. Erreur: {e}")
                 continue
-                
     except GithubException as e:
         if e.status == 404: 
             print("Le dossier 'articles' n'a pas été trouvé, on commence avec une liste vide.")
@@ -52,8 +53,7 @@ def get_existing_articles(repo):
 
 def publish_article_and_update_index(title, summary, image_url, config):
     try:
-        # LA CORRECTION EST ICI. On cherche GITHUB_TOKEN, comme défini dans le workflow.
-        token = os.environ['GITHUB_TOKEN'] 
+        token = os.environ['A_GH_TOKEN']
         repo_name = config['site_repo_name']
         g = Github(token)
         repo = g.get_repo(repo_name)
