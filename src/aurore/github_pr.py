@@ -3,6 +3,9 @@ import os
 import sys
 import datetime
 from github import Github, GithubException
+
+# --- NOTE : Jinja2 et BeautifulSoup ne sont plus nécessaires dans ce module si les templates sont gérés ailleurs ---
+# On les garde pour l'instant pour ne pas tout casser, mais on pourrait refactoriser.
 from jinja2 import Environment, FileSystemLoader
 from bs4 import BeautifulSoup
 
@@ -14,7 +17,13 @@ def get_existing_articles(repo):
     print("Scan des articles existants...")
     articles = []
     try:
+        # --- DÉBUT DU BLOC DE DÉBOGAGE ---
+        print("DEBUG: Tentative de lister le contenu du dossier 'articles'...")
         contents = repo.get_contents("articles")
+        print(f"DEBUG: Contenu brut reçu de get_contents('articles'): {contents}")
+        print(f"DEBUG: Type de l'objet contents: {type(contents)}")
+        # --- FIN DU BLOC DE DÉBOGAGE ---
+
         for file in contents:
             file_content = file.decoded_content.decode('utf-8')
             soup = BeautifulSoup(file_content, 'html.parser')
@@ -31,7 +40,9 @@ def get_existing_articles(repo):
                     'image_url': image_tag['content'] if image_tag else None,
                 })
     except GithubException as e:
-        if e.status == 404: return []
+        if e.status == 404: 
+            print("DEBUG: Le dossier 'articles' n'a pas été trouvé (404), retour d'une liste vide.")
+            return []
         else: raise e
     print(f"{len(articles)} articles existants trouvés.")
     return articles
@@ -47,30 +58,23 @@ def publish_article_and_update_index(title, summary, image_url, config):
         slug = slugify(title)
         filename = f"{now.strftime('%Y-%m-%d')}-{slug}.html"
         
-        # --- NOUVELLE LOGIQUE ---
-
-        # 1. On récupère les anciens articles AVANT de publier le nouveau
         existing_articles = get_existing_articles(repo)
 
-        # 2. On prépare le nouvel article "en mémoire"
         new_article_data = {
             'title': title,
             'iso_date': now.isoformat(),
             'date_human': now.strftime('%d/%m/%Y'),
             'filename': filename,
             'image_url': image_url,
-            'summary_preview': summary.split('.')[0] # Prend la première phrase pour l'aperçu
+            'summary_preview': summary.split('.')[0]
         }
 
-        # 3. On crée la liste complète et à jour
         all_articles = [new_article_data] + existing_articles
         all_articles.sort(key=lambda x: x['iso_date'], reverse=True)
         latest_articles = all_articles[:10]
-
-        # 4. On génère les fichiers HTML
+        
         env = Environment(loader=FileSystemLoader('templates'))
         
-        # HTML de l'article
         summary_html = summary.replace('\n', '<br>')
         article_template = env.get_template('article.html.j2')
         article_html = article_template.render(
@@ -79,16 +83,12 @@ def publish_article_and_update_index(title, summary, image_url, config):
             brand_color=config['brand_color'], production_url=config['production_url'], filename=filename
         )
         
-        # HTML de l'index
         index_template = env.get_template('index.html.j2')
         index_html = index_template.render(articles=latest_articles, brand_name=config['brand_name'], brand_color=config['brand_color'])
 
-        # 5. On pousse les modifications sur GitHub
-        # Publier le nouvel article
         repo.create_file(f"articles/{filename}", f"feat: Ajout de l'article '{title}'", article_html, branch="main")
         print(f"Nouvel article '{filename}' publié.")
 
-        # Mettre à jour l'index
         try:
             contents = repo.get_contents("index.html", ref="main")
             repo.update_file(contents.path, "chore: Mise à jour de la page d'accueil", index_html, contents.sha, branch="main")
