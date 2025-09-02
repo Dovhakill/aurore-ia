@@ -15,19 +15,15 @@ def get_existing_articles(repo):
     articles = []
     try:
         contents = repo.get_contents("articles")
-        print(f"Scan initial : {len(contents)} fichiers détectés dans /articles.")
         for file in contents:
             try:
-                # On s'assure de travailler sur des fichiers et non des dossiers
                 if file.type != 'file':
                     continue
-                
                 file_content = file.decoded_content.decode('utf-8')
                 soup = BeautifulSoup(file_content, 'html.parser')
                 title_tag = soup.find('meta', property='og:title')
                 date_tag = soup.find('meta', property='article:published_time')
                 image_tag = soup.find('meta', property='og:image')
-
                 if title_tag and title_tag.get('content') and date_tag and date_tag.get('content'):
                     iso_date_str = date_tag['content']
                     articles.append({
@@ -47,13 +43,12 @@ def get_existing_articles(repo):
         else:
             print(f"Erreur GitHub lors du scan des articles: {e}")
             sys.exit(1)
-            
     print(f"{len(articles)} articles existants parsés avec succès.")
     return articles
 
 def publish_article_and_update_index(title, summary, image_url, config):
     try:
-        token = os.environ['A_GH_TOKEN']
+        token = os.environ['GITHUB_TOKEN']
         repo_name = config['site_repo_name']
         g = Github(token)
         repo = g.get_repo(repo_name)
