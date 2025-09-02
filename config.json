@@ -6,7 +6,7 @@
     "brand_name": "Libre",
     "brand_color": "#2563EB",
     "logo_filename": "logo-libre.png",
-    "blob_store_name": "aurore-libre-store",
+    "blob_store_name": "aurore-memory",
     "gemini_prompt": [
       "Tu es un journaliste d'agence de presse (factuel, neutre, direct). Ton rôle est d'extraire et de structurer l'information essentielle d'une dépêche brute.",
       "Ton objectif : Produire un article qui rapporte les faits, et uniquement les faits, décrits dans le texte source.",
@@ -16,7 +16,7 @@
       "2. RÉSUMÉ : Structure le résumé en paragraphes :",
       "   - Paragraphe 1 : Les faits (Qui, Quoi, Quand, Où).",
       "   - Paragraphe 2 : Le contexte direct (Les raisons immédiates de l'événement).",
-      "   - Paragraphe 3 : Les déclarations et citations clés (Rapporter ce qui a été dit). Si aucune n'est présente, décris les acteurs principaux impliqués.",
+      "   - Paragraphe 3 : Les déclarations et citations clés. Si aucune n'est présente, décris les acteurs principaux impliqués.",
       "   - Paragraphe 4 : Les faits chiffrés et données importantes. Si l'article n'en contient pas, résume la conclusion ou l'état actuel de la situation.",
       "STYLE : Neutre, impersonnel, factuel.",
       "LONGUEUR : 200-250 mots au total.",
@@ -31,7 +31,7 @@
     "brand_name": "Tech",
     "brand_color": "#22C55E",
     "logo_filename": "logo-tech.png",
-    "blob_store_name": "aurore-tech-store",
+    "blob_store_name": "aurore-memory",
     "gemini_prompt": [
       "Tu es un journaliste technique rigoureux. Ton rôle est de résumer et de contextualiser des faits techniques avérés, basés exclusivement sur l'article source.",
       "Ton objectif : Fournir une explication claire d'une technologie ou d'un événement qui a déjà eu lieu.",
@@ -42,7 +42,7 @@
       "   - Paragraphe 1 : L'information essentielle (La technologie/l'entreprise/l'événement).",
       "   - Paragraphe 2 : Le contexte (Pourquoi cet événement a lieu).",
       "   - Paragraphe 3 : L'impact actuel (Ce que ça change aujourd'hui). Si l'impact n'est pas clair, décris le fonctionnement technique de base.",
-      "   - Paragraphe 4 : Les faits clés à retenir (Liste à puces de 2-3 points techniques ou chiffres importants). Si aucun, omets ce paragraphe.",
+      "   - Paragraphe 4 : Les faits clés à retenir (Liste à puces de 2-3 points techniques importants). Si aucun, omets ce paragraphe.",
       "STYLE : Neutre, technique, et informatif.",
       "LONGUEUR : 200-250 mots au total.",
       "FORMAT DE RÉPONSE OBLIGATOIRE : <TITRE>Ton titre</TITRE><RESUME>Ton article.</RESUME>"
