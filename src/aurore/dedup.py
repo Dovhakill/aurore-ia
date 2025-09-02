@@ -2,6 +2,7 @@
 import os
 import sys
 import json
+import requests # <--- L'IMPORT MANQUANT EST ICI
 from typing import Set, Dict, Optional
 
 BLOB_KEY = "processed_urls"
@@ -16,7 +17,7 @@ def find_first_unique_article(articles: list, processed_urls: Set[str]) -> Optio
     return None
 
 def get_processed_urls(config: dict) -> Set[str]:
-    blob_store_url = f"https://api.netlify.com/api/v1/sites/{os.environ['NETLIFY_SITE_ID']}/blobs/{config.get('blob_store_name', 'default_store')}"
+    blob_store_url = f"https://api.netlify.com/api/v1/sites/{os.environ['NETLIFY_SITE_ID']}/blobs/{config.get('blob_store_name')}"
     headers = {"Authorization": f"Bearer {os.environ['NETLIFY_BLOBS_TOKEN']}"}
     print("--- Début de la lecture depuis Netlify Blobs ---")
     try:
@@ -35,7 +36,7 @@ def get_processed_urls(config: dict) -> Set[str]:
         print("--- Fin de la lecture depuis Netlify Blobs ---")
 
 def save_processed_urls(urls_to_save: Set[str], config: dict):
-    blob_store_url = f"https://api.netlify.com/api/v1/sites/{os.environ['NETLIFY_SITE_ID']}/blobs/{config.get('blob_store_name', 'default_store')}"
+    blob_store_url = f"https://api.netlify.com/api/v1/sites/{os.environ['NETLIFY_SITE_ID']}/blobs/{config.get('blob_store_name')}"
     headers = {"Authorization": f"Bearer {os.environ['NETLIFY_BLOBS_TOKEN']}"}
     data_payload = list(urls_to_save)
     print("--- Début de la sauvegarde dans Netlify Blobs ---")
