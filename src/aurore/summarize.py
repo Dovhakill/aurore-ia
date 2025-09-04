@@ -1,56 +1,63 @@
-import os
-import re
-import sys
+import os, re, sys, json
 import google.generativeai as genai
 
-def parse_gemini_response(response_text):
+def _parse_as_json(text: str):
     try:
-        title_match = re.search(r'<TITRE>(.*?)</TITRE>', response_text, re.DOTALL)
-        summary_match = re.search(r'<RESUME>(.*?)</RESUME>', response_text, re.DOTALL)
+        obj = json.loads(text)
+        return obj.get("title"), obj.get("summary"), obj.get("source_name")
+    except Exception:
+        return None, None, None
 
-        if title_match and summary_match:
-            title = title_match.group(1).strip()
-            summary = summary_match.group(1).strip()
-            return title, summary
-        else:
-            print(f"Réponse de l'IA mal formatée (balises manquantes) : {response_text}")
-            return None, None
-    except Exception as e:
-        print(f"Erreur lors du parsing de la réponse de l'IA : {e}")
-        return None, None
+def _parse_as_tags(text: str):
+    t = re.search(r'<TITRE>(.*?)</TITRE>', text, re.DOTALL)
+    s = re.search(r'<RESUME>(.*?)</RESUME>', text, re.DOTALL)
+    if t and s:
+        return t.group(1).strip(), s.group(1).strip(), None
+    return None, None, None
 
-def summarize_article(article_content, config):
+def summarize_article(article_content: str, config: dict):
     if not article_content:
         print("Le contenu de l'article est vide, impossible de résumer.")
         return None, None
-        
-    print("Génération du résumé avec Gemini...")
     try:
-        # La ligne correcte, sans faute de frappe
-        gemini_api_key = os.environ["GEMINI_API_KEY"]
-        genai.configure(api_key=gemini_api_key)
-        
-        # J'ai vu que 'gemini_prompt' n'était pas dans ton config.json, je le retire pour éviter une autre erreur
-        # prompt = config['gemini_prompt'] + f"\n\nARTICLE À ANALYSER:\n{article_content}"
-        prompt_template = "Voici un article de presse. Crée un titre percutant et un résumé neutre et factuel. Le format de ta réponse doit être exclusivement : <TITRE>Ton titre</TITRE><RESUME>Ton résumé.</RESUME>"
-        prompt = prompt_template + f"\n\nARTICLE À ANALYSER:\n{article_content}"
-
-        
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
-        
-        title, summary_markdown = parse_gemini_response(response.text)
-        
-        if title and summary_markdown:
-            print(f"Résumé généré avec succès. Titre : {title}")
-            return title, summary_markdown
-        else:
+        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+        model = genai.GenerativeModel(
+            "gemini-1.5-flash",
+            generation_config={
+                "temperature": 0.4,
+                "top_p": 0.95,
+                "max_output_tokens": 1024,
+                "response_mime_type": "application/json",
+            },
+            system_instruction=(
+                "Tu es Aurore, une IA de synthèse d'information pour Horizon Network. "
+                "Neutralité stricte. Pas d'opinion. Sortie: JSON valide uniquement."
+            ),
+        )
+        user_prompt = (
+            "Voici le texte brut d'un article. Analyse-le et retourne un objet JSON "
+            'avec la structure exacte: {"title":"...","summary":"...","source_name":"..."}.\n\n'
+            "Rappels: titre 4-10 mots, résumé 3-5 phrases neutres (100-150 mots), source_name = média d'origine.\n\n"
+            "Article source:\n\"\"\"\n" + article_content + "\n\"\"\"\n"
+        )
+        resp = model.generate_content(user_prompt)
+        text = getattr(resp, "text", None)
+        if text is None:
+            # SDK fallback
+            try:
+                text = resp.candidates[0].content.parts[0].text
+            except Exception:
+                text = ""
+        title, summary, _ = _parse_as_json(text)
+        if not (title and summary):
+            title, summary, _ = _parse_as_tags(text)
+        if not (title and summary):
+            print(f"Réponse IA non exploitable: {text}")
             return None, None
-
+        return title.strip(), summary.strip()
     except KeyError:
-        # On met le bon message d'erreur pour le futur
-        print("Erreur critique : Le secret GEMINI_API_KEY est manquant dans l'environnement.")
-        sys.exit(1)
+        print("Erreur critique : Le secret GEMINI_API_KEY est manquant.")
+        return None, None
     except Exception as e:
-        print(f"Erreur critique lors de la génération du résumé : {e}")
-        sys.exit(1)
+        print(f"Erreur inattendue lors de la génération du résumé avec Gemini : {e}")
+        return None, None

@@ -3,7 +3,7 @@ const { getStore } = require("@netlify/blobs");
 exports.handler = async (event) => {
   try {
     const secret = process.env.AURORE_BLOBS_TOKEN;
-    const got = event.headers["x-aurore-token"];
+    const got = event.headers["x-aurore-token"] || event.headers["X-AURORE-TOKEN"];
 
     if (!secret || got !== secret) {
       return { statusCode: 401, body: "Unauthorized" };
@@ -16,16 +16,17 @@ exports.handler = async (event) => {
     });
 
     if (event.httpMethod === "GET") {
-      const key = event.queryStringParameters.key;
+      const qs = event.queryStringParameters || {};
+      const key = qs.key;
       if (!key) return { statusCode: 400, body: "Missing key" };
-      const val = await store.get(key);
-      if (!val) return { statusCode: 404, body: "Not found" };
-      return { statusCode: 200, body: val };
+      const val = await store.getJSON(key);
+      if (!val) return { statusCode: 404, body: "" };
+      return { statusCode: 200, body: JSON.stringify(val) };
     }
 
     if (event.httpMethod === "POST") {
-      const body = JSON.parse(event.body);
-      const { key, meta } = body || {};
+      const body = JSON.parse(event.body || "{}");
+      const { key, meta } = body;
       if (!key) return { statusCode: 400, body: "Missing key" };
       await store.setJSON(key, meta || {});
       return { statusCode: 201, body: "OK" };

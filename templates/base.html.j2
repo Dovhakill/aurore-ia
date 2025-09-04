@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Horizon{% endblock %} - Horizon Network</title>
+    {% block meta_tags %}{% endblock %}
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -17,7 +18,7 @@
     <header class="bg-white shadow-sm">
         <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
             <a href="/" class="flex items-center space-x-4">
-                <svg class="h-16 w-auto" viewBox="0 0 280 60" fill="none" xmlns="http://www.w.org/2000/svg">
+                <svg class="h-16 w-auto" viewBox="0 0 280 60" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M10 40 H 50" stroke="#1F2937" stroke-width="3"/>
                     <path d="M10 40 A 20 20 0 0 1 50 40" stroke="{{ brand_color }}" stroke-width="3"/>
                     <text x="70" y="48" font-family="Inter, sans-serif" font-size="38" font-weight="600" fill="#1F2937">HORIZON</text>
