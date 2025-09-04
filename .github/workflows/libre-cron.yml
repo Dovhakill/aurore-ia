@@ -3,10 +3,9 @@ name: Aurore Cron – Libre
 on:
   workflow_dispatch:
   schedule:
-    # Toutes les 4h (UTC) aux heures suivantes
+    # Toutes les 4h (UTC)
     - cron: '0 2,6,10,14,18,22 * * *'
 
-# Un seul run à la fois pour tout le repo (Libre/Tech confondus)
 concurrency:
   group: aurore-global
   cancel-in-progress: false
@@ -16,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,17 +32,25 @@ jobs:
 
       - name: Run Aurore (Libre)
         env:
-          GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GH_TOKEN:       ${{ secrets.GH_TOKEN }}     # Remplace si ton PAT s’appelle autrement
-          GITHUB_TOKEN:   ${{ secrets.GH_TOKEN }}     # Fallback pour le code
-          BLOBS_PROXY_URL:     ${{ vars.BLOBS_PROXY_URL }}
-          AURORE_BLOBS_TOKEN:  ${{ secrets.AURORE_BLOBS_TOKEN }}
-          TWITTER_ACCESS_TOKEN:        ${{ secrets.TWITTER_ACCESS_TOKEN }}
-          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+          # === Tes secrets (mappés) ===
+          GNEWS_API_KEY:             ${{ secrets.GNEWS_API_KEY }}
+          GEMINI_API_KEY:            ${{ secrets.GEMINI_API_KEY }}
+          GH_TOKEN:                  ${{ secrets.A_GH_TOKEN }}
+          GITHUB_TOKEN:              ${{ secrets.A_GH_TOKEN }}   # fallback
+
+          # Blobs mode proxy (facultatif) : si BLOBS_PROXY_URL absent => fallback API directe Netlify
+          BLOBS_PROXY_URL:           ${{ vars.BLOBS_PROXY_URL }}
+          AURORE_BLOBS_TOKEN:        ${{ secrets.NETLIFY_BLOBS_TOKEN }}
+
+          # Fallback API directe Netlify (si pas de proxy)
+          NETLIFY_BLOBS_TOKEN:       ${{ secrets.NETLIFY_BLOBS_TOKEN }}
+          NETLIFY_SITE_ID:           ${{ secrets.NETLIFY_SITE_ID }}
+
+          # Twitter (OAuth1)
           TWITTER_API_KEY:             ${{ secrets.TWITTER_API_KEY }}
           TWITTER_API_SECRET_KEY:      ${{ secrets.TWITTER_API_SECRET_KEY }}
-          TWITTER_BEARER_TOKEN:        ${{ secrets.TWITTER_BEARER_TOKEN }}
+          TWITTER_ACCESS_TOKEN:        ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
         run: |
           set -e
           python -m src.aurore --config libre
