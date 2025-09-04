@@ -1,40 +1,50 @@
-# WORKFLOW POUR HORIZON TECH
-name: Aurore Cron - Tech
+name: Aurore Cron – Tech
 
 on:
   workflow_dispatch:
   schedule:
-    # 6h, 10h, 14h, 18h, 22h, 2h (heure de Paris, CEST)
-    - cron: '0 4,8,12,16,20,0 * * *'
+    # Décalé de +30 min par rapport à Libre
+    - cron: '30 2,6,10,14,18,22 * * *'
+
+# Même groupe de concurrency pour éviter tout chevauchement
+concurrency:
+  group: aurore-global
+  cancel-in-progress: false
 
 jobs:
   run-tech:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Python
+
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
+          cache: 'pip'
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install -U pip
           pip install -r requirements.txt
-      - name: Run Aurore IA for Tech
+
+      - name: Run Aurore (Tech)
         env:
-          GITHUB_TOKEN: ${{ secrets.A_GH_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
-          NETLIFY_BLOBS_TOKEN: ${{ secrets.NETLIFY_BLOBS_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GH_TOKEN:       ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN:   ${{ secrets.GH_TOKEN }}     # Fallback pour le code
+          BLOBS_PROXY_URL:     ${{ vars.BLOBS_PROXY_URL }}
+          AURORE_BLOBS_TOKEN:  ${{ secrets.AURORE_BLOBS_TOKEN }}
+          TWITTER_ACCESS_TOKEN:        ${{ secrets.TWITTER_ACCESS_TOKEN }}
           TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
-          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
-          TWITTER_API_SECRET_KEY: ${{ secrets.TWITTER_API_SECRET_KEY }}
-          TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
+          TWITTER_API_KEY:             ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET_KEY:      ${{ secrets.TWITTER_API_SECRET_KEY }}
+          TWITTER_BEARER_TOKEN:        ${{ secrets.TWITTER_BEARER_TOKEN }}
         run: |
           set -e
           python -m src.aurore --config tech
