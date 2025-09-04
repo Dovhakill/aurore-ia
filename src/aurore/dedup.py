@@ -1,21 +1,13 @@
-<<<<<<< HEAD
+# -*- coding: utf-8 -*-
 import os, json, hashlib, requests
-=======
-import os
-import sys
-import json
-import requests
->>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
 from typing import Set, Dict, Optional
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
 
-<<<<<<< HEAD
-# Legacy list key (kept for migration)
-=======
->>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
-BLOB_KEY = "processed_urls"
-KEY_PREFIX = "processed:"
+# ----- Constantes -----
+BLOB_KEY   = "processed_urls"       # Legacy list (compat pour migration douce)
+KEY_PREFIX = "processed:"           # Nouvelles clés par article
 
+# ----- Utils URL -----
 def _normalize_url(u: str) -> str:
     try:
         p = urlparse(u)
@@ -30,25 +22,121 @@ def _key_for(u: str) -> str:
     h = hashlib.sha256(n.encode("utf-8")).hexdigest()
     return KEY_PREFIX + h
 
-def _proxy_headers():
-    return {
-        "X-AURORE-TOKEN": os.environ["AURORE_BLOBS_TOKEN"],
-        "Content-Type": "application/json",
-        "User-Agent": "Aurore/1.0",
-    }
+# ----- Mode détection -----
+def _has_proxy() -> bool:
+    return bool(os.environ.get("BLOBS_PROXY_URL"))
 
-def _proxy_url(config: dict) -> str:
+def _token_proxy() -> str:
+    # On accepte AURORE_BLOBS_TOKEN (recommandé) ou NETLIFY_BLOBS_TOKEN
+    return os.environ.get("AURORE_BLOBS_TOKEN") or os.environ.get("NETLIFY_BLOBS_TOKEN") or ""
+
+def _headers_proxy() -> dict:
+    return {"X-AURORE-TOKEN": _token_proxy(), "Content-Type": "application/json", "User-Agent": "Aurore/1.0"}
+
+def _url_proxy() -> str:
     return os.environ["BLOBS_PROXY_URL"].rstrip("/")
 
+# ----- Direct Netlify API -----
+def _site_id() -> str:
+    return os.environ["NETLIFY_SITE_ID"]
+
+def _token_direct() -> str:
+    return os.environ["NETLIFY_BLOBS_TOKEN"]
+
+def _store_name(config: dict) -> str:
+    return config.get("blob_store_name", "aurore-memory")
+
+def _base_direct(config: dict) -> str:
+    return f"https://api.netlify.com/api/v1/sites/{_site_id()}/blobs/{_store_name(config)}"
+
+def _headers_direct() -> dict:
+    return {"Authorization": f"Bearer {_token_direct()}", "Content-Type": "application/json", "User-Agent": "Aurore/1.0"}
+
+# ----- Legacy list (pour migration douce) -----
+def get_processed_urls(config: dict) -> Set[str]:
+    """Lit la liste legacy des URLs (BLOB_KEY). Retourne un set normalisé."""
+    try:
+        if _has_proxy():
+            r = requests.get(_url_proxy() + f"?key={BLOB_KEY}", headers=_headers_proxy(), timeout=10)
+            if r.status_code == 200:
+                arr = r.json() or []
+                urls = set(_normalize_url(u) for u in arr if isinstance(u, str))
+                print(f">>> Mémoire legacy (proxy): {len(urls)} URLs")
+                return urls
+            print(f">>> Pas de mémoire legacy (proxy code {r.status_code})")
+            return set()
+        else:
+            url = _base_direct(config) + f"/{BLOB_KEY}"
+            r = requests.get(url, headers=_headers_direct(), timeout=10)
+            if r.status_code == 200:
+                arr = r.json() or []
+                urls = set(_normalize_url(u) for u in arr if isinstance(u, str))
+                print(f">>> Mémoire legacy (direct): {len(urls)} URLs")
+                return urls
+            print(f">>> Pas de mémoire legacy (direct code {r.status_code})")
+            return set()
+    except Exception as e:
+        print(f">>> Lecture mémoire legacy impossible: {e}")
+        return set()
+
+def save_processed_urls(urls_set: Set[str], config: dict) -> None:
+    """Écrit la liste legacy (compat)."""
+    try:
+        payload = [_normalize_url(u) for u in urls_set]
+        if _has_proxy():
+            r = requests.post(_url_proxy(), headers=_headers_proxy(), data=json.dumps({"key": BLOB_KEY, "meta": payload}), timeout=10)
+            r.raise_for_status()
+            print(f">>> SUCCÈS: {len(payload)} URLs sauvegardées (legacy via proxy).")
+        else:
+            url = _base_direct(config) + f"/{BLOB_KEY}"
+            r = requests.put(url, headers=_headers_direct(), json=payload, timeout=10)
+            r.raise_for_status()
+            print(f">>> SUCCÈS: {len(payload)} URLs sauvegardées (legacy direct).")
+    except requests.exceptions.RequestException as e:
+        print(">>> Échec de la sauvegarde legacy.")
+        if getattr(e, "response", None) is not None:
+            print(f"Status: {e.response.status_code} Body: {e.response.text}")
+        else:
+            print(f"Erreur: {e}")
+    finally:
+        print("--- Fin sauvegarde legacy ---")
+
+# ----- Nouvelles clés par article -----
+def has_processed(url: str, config: dict) -> bool:
+    try:
+        k = _key_for(url)
+        if _has_proxy():
+            r = requests.get(_url_proxy() + f"?key={k}", headers=_headers_proxy(), timeout=10)
+            return r.status_code == 200 and bool(r.text)
+        else:
+            u = _base_direct(config) + f"/{k}"
+            r = requests.get(u, headers=_headers_direct(), timeout=10)
+            return r.status_code == 200 and bool(r.text)
+    except Exception as e:
+        print(f">>> Erreur has_processed: {e}")
+        return False
+
+def mark_processed(url: str, published_iso: Optional[str], config: dict) -> None:
+    try:
+        k = _key_for(url)
+        meta = {"processedAt": published_iso or None}
+        if _has_proxy():
+            r = requests.post(_url_proxy(), headers=_headers_proxy(), data=json.dumps({"key": k, "meta": meta}), timeout=10)
+            if r.status_code not in (200, 201):
+                print(f">>> WARN proxy setJSON {r.status_code} – {r.text}")
+        else:
+            u = _base_direct(config) + f"/{k}"
+            r = requests.put(u, headers=_headers_direct(), json=meta, timeout=10)
+            if r.status_code not in (200, 201):
+                print(f">>> WARN direct setJSON {r.status_code} – {r.text}")
+    except Exception as e:
+        print(f">>> Erreur mark_processed: {e}")
+
+# ----- Sélection article -----
 def find_first_unique_article(articles: list, processed_urls: Set[str]) -> Optional[Dict]:
-<<<<<<< HEAD
-    """
-    Parcourt la liste des articles et retourne le premier dont l'URL normalisée n'est pas
-    dans le set des URLs déjà traitées (legacy) ET pas marqué via les clés par article.
-    """
-    print(f"Recherche d'un article unique parmi {len(articles)} articles trouvés...")
+    print(f"Recherche d'un article unique parmi {len(articles)} candidats…")
     for article in articles:
-        url = article.get('url')
+        url = (article.get('url') or "").strip()
         if not url:
             continue
         n = _normalize_url(url)
@@ -57,90 +145,3 @@ def find_first_unique_article(articles: list, processed_urls: Set[str]) -> Optio
             return article
     print("Aucun article unique trouvé.")
     return None
-
-def get_processed_urls(config: dict) -> Set[str]:
-    """
-    MIGRATION DOUCE : lit la liste legacy (BLOB_KEY) via proxy si présente.
-    """
-    try:
-        r = requests.get(_proxy_url(config) + f"?key={BLOB_KEY}", headers=_proxy_headers(), timeout=10)
-        if r.status_code == 200:
-            arr = r.json() or []
-            urls = set(_normalize_url(u) for u in arr if isinstance(u, str))
-            print(f">>> Mémoire legacy: {len(urls)} URLs")
-            return urls
-        print(f">>> Pas de mémoire legacy (code {r.status_code})")
-        return set()
-    except Exception as e:
-        print(f">>> Lecture mémoire legacy impossible: {e}")
-        return set()
-
-def has_processed(url: str, config: dict) -> bool:
-    try:
-        k = _key_for(url)
-        r = requests.get(_proxy_url(config) + f"?key={k}", headers=_proxy_headers(), timeout=10)
-        if r.status_code == 200 and r.text:
-            return True
-        return False
-    except Exception as e:
-        print(f">>> Erreur has_processed: {e}")
-        return False
-
-def mark_processed(url: str, published_iso: Optional[str], config: dict) -> None:
-    try:
-        k = _key_for(url)
-        payload = {"key": k, "meta": {"processedAt": published_iso or None}}
-        r = requests.post(_proxy_url(config), headers=_proxy_headers(), data=json.dumps(payload), timeout=10)
-        if r.status_code not in (200, 201):
-            print(f">>> WARN: proxy setJSON {r.status_code} – {r.text}")
-    except Exception as e:
-        print(f">>> Erreur mark_processed: {e}")
-
-def save_processed_urls(urls_set: Set[str], config: dict) -> None:
-    """
-    **Legacy**: sauvegarde la liste d'URLs traitées (pour compatibilité).
-    """
-    try:
-        data_payload = [u for u in urls_set]
-        r = requests.post(_proxy_url(config), headers=_proxy_headers(),
-                          data=json.dumps({"key": BLOB_KEY, "meta": data_payload}), timeout=10)
-        r.raise_for_status()
-        print(f">>> SUCCÈS: {len(data_payload)} URLs sauvegardées (legacy).")
-    except requests.exceptions.RequestException as e:
-        print(">>> ERREUR CRITIQUE: Échec de la sauvegarde (legacy).")
-        if getattr(e, "response", None) is not None:
-            print(f"Status Code: {e.response.status_code}")
-            print(f"Réponse de l'API: {e.response.text}")
-        else:
-            print(f"Erreur de connexion: {e}")
-    finally:
-        print("--- Fin de la sauvegarde dans Netlify Blobs (legacy) ---")
-=======
-    for article in articles:
-        if article['url'] not in processed_urls:
-            return article
-    return None
-
-def get_processed_urls(config: dict) -> Set[str]:
-    blob_store_url = f"https://api.netlify.com/api/v1/sites/{os.environ['NETLIFY_SITE_ID']}/blobs/{config.get('blob_store_name')}"
-    headers = {"Authorization": f"Bearer {os.environ['NETLIFY_BLOBS_TOKEN']}"}
-    try:
-        response = requests.get(f"{blob_store_url}/{BLOB_KEY}", headers=headers)
-        if response.status_code == 404:
-            return set()
-        response.raise_for_status()
-        return set(response.json())
-    except Exception as e:
-        print(f"ERREUR LECTURE NETLIFY BLOBS: {e}")
-        return set()
-
-def save_processed_urls(urls_to_save: Set[str], config: dict):
-    blob_store_url = f"https://api.netlify.com/api/v1/sites/{os.environ['NETLIFY_SITE_ID']}/blobs/{config.get('blob_store_name')}"
-    headers = {"Authorization": f"Bearer {os.environ['NETLIFY_BLOBS_TOKEN']}"}
-    try:
-        response = requests.put(f"{blob_store_url}/{BLOB_KEY}", headers=headers, json=list(urls_to_save))
-        response.raise_for_status() 
-        print(f">>> SUCCÈS: {len(urls_to_save)} URLs sauvegardées.")
-    except Exception as e:
-        print(f"ERREUR SAUVEGARDE NETLIFY BLOBS: {e}")
->>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
