@@ -1,8 +1,18 @@
+<<<<<<< HEAD
 import os, json, hashlib, requests
+=======
+import os
+import sys
+import json
+import requests
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
 from typing import Set, Dict, Optional
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
 
+<<<<<<< HEAD
 # Legacy list key (kept for migration)
+=======
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
 BLOB_KEY = "processed_urls"
 KEY_PREFIX = "processed:"
 
@@ -31,6 +41,7 @@ def _proxy_url(config: dict) -> str:
     return os.environ["BLOBS_PROXY_URL"].rstrip("/")
 
 def find_first_unique_article(articles: list, processed_urls: Set[str]) -> Optional[Dict]:
+<<<<<<< HEAD
     """
     Parcourt la liste des articles et retourne le premier dont l'URL normalisée n'est pas
     dans le set des URLs déjà traitées (legacy) ET pas marqué via les clés par article.
@@ -104,3 +115,32 @@ def save_processed_urls(urls_set: Set[str], config: dict) -> None:
             print(f"Erreur de connexion: {e}")
     finally:
         print("--- Fin de la sauvegarde dans Netlify Blobs (legacy) ---")
+=======
+    for article in articles:
+        if article['url'] not in processed_urls:
+            return article
+    return None
+
+def get_processed_urls(config: dict) -> Set[str]:
+    blob_store_url = f"https://api.netlify.com/api/v1/sites/{os.environ['NETLIFY_SITE_ID']}/blobs/{config.get('blob_store_name')}"
+    headers = {"Authorization": f"Bearer {os.environ['NETLIFY_BLOBS_TOKEN']}"}
+    try:
+        response = requests.get(f"{blob_store_url}/{BLOB_KEY}", headers=headers)
+        if response.status_code == 404:
+            return set()
+        response.raise_for_status()
+        return set(response.json())
+    except Exception as e:
+        print(f"ERREUR LECTURE NETLIFY BLOBS: {e}")
+        return set()
+
+def save_processed_urls(urls_to_save: Set[str], config: dict):
+    blob_store_url = f"https://api.netlify.com/api/v1/sites/{os.environ['NETLIFY_SITE_ID']}/blobs/{config.get('blob_store_name')}"
+    headers = {"Authorization": f"Bearer {os.environ['NETLIFY_BLOBS_TOKEN']}"}
+    try:
+        response = requests.put(f"{blob_store_url}/{BLOB_KEY}", headers=headers, json=list(urls_to_save))
+        response.raise_for_status() 
+        print(f">>> SUCCÈS: {len(urls_to_save)} URLs sauvegardées.")
+    except Exception as e:
+        print(f"ERREUR SAUVEGARDE NETLIFY BLOBS: {e}")
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd

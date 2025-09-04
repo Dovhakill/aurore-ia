@@ -1,4 +1,11 @@
+<<<<<<< HEAD
 import os, re, sys, json
+=======
+# -*- coding: utf-8 -*-
+import os
+import re
+import sys
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
 import google.generativeai as genai
 
 def _parse_as_json(text: str):
@@ -20,6 +27,7 @@ def summarize_article(article_content: str, config: dict):
         print("Le contenu de l'article est vide, impossible de résumer.")
         return None, None
     try:
+<<<<<<< HEAD
         genai.configure(api_key=os.environ["GEMINI_API_KEY"])
         model = genai.GenerativeModel(
             "gemini-1.5-flash",
@@ -53,11 +61,34 @@ def summarize_article(article_content: str, config: dict):
             title, summary, _ = _parse_as_tags(text)
         if not (title and summary):
             print(f"Réponse IA non exploitable: {text}")
+=======
+        gemini_api_key = os.environ["GEMINI_API_KEY"]
+        genai.configure(api_key=gemini_api_key)
+        
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # On assemble le prompt multi-lignes depuis la config
+        prompt_text = "".join(config['gemini_prompt'])
+        prompt = prompt_text + f"\n\nArticle source à analyser :\n{article_content}"
+        
+        response = model.generate_content(prompt)
+        
+        title, summary_markdown = parse_gemini_response(response.text)
+        
+        if title and summary_markdown:
+            print(f"Résumé généré avec succès. Titre : {title}")
+            return title, summary_markdown
+        else:
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
             return None, None
         return title.strip(), summary.strip()
     except KeyError:
         print("Erreur critique : Le secret GEMINI_API_KEY est manquant.")
+<<<<<<< HEAD
         return None, None
+=======
+        sys.exit(1)
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
     except Exception as e:
         print(f"Erreur inattendue lors de la génération du résumé avec Gemini : {e}")
         return None, None

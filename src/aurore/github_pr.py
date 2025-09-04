@@ -10,6 +10,7 @@ def slugify(text: str) -> str:
     text = text.lower()
     return "".join(c if c.isalnum() else '-' for c in text).strip('-')
 
+<<<<<<< HEAD
 def _parse_iso(iso_str: str | None, fallback_dt: datetime.datetime) -> str:
     """Retourne un ISO 8601 (UTC). Si iso_str invalide, utilise fallback_dt (déjà en UTC)."""
     if iso_str:
@@ -19,11 +20,23 @@ def _parse_iso(iso_str: str | None, fallback_dt: datetime.datetime) -> str:
                 dt = datetime.datetime.fromisoformat(s.replace('Z', '+00:00'))
             else:
                 dt = datetime.datetime.fromisoformat(s)
+=======
+def _parse_iso_or_filename(iso_str: str | None, filename: str) -> str:
+    """Retourne un ISO 8601 (UTC) sûr, à partir de la meta ou du préfixe du fichier."""
+    if iso_str:
+        try:
+            # support 'Z' / naive
+            if iso_str.endswith('Z'):
+                dt = datetime.datetime.fromisoformat(iso_str.replace('Z', '+00:00'))
+            else:
+                dt = datetime.datetime.fromisoformat(iso_str)
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=datetime.timezone.utc)
             return dt.astimezone(datetime.timezone.utc).isoformat()
         except Exception:
             pass
+<<<<<<< HEAD
     return fallback_dt.isoformat()
 
 def _to_human(iso_str: str) -> str:
@@ -32,6 +45,15 @@ def _to_human(iso_str: str) -> str:
         return dt.astimezone(datetime.timezone.utc).strftime('%d/%m/%Y')
     except Exception:
         return datetime.datetime.now(datetime.timezone.utc).strftime('%d/%m/%Y')
+=======
+    # fallback depuis le nom: YYYY-MM-DD-...
+    try:
+        d = filename[:10]
+        dt = datetime.datetime.strptime(d, '%Y-%m-%d').replace(tzinfo=datetime.timezone.utc)
+        return dt.isoformat()
+    except Exception:
+        return datetime.datetime.now(datetime.timezone.utc).isoformat()
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
 
 def get_existing_articles(repo):
     """Parcourt /articles et retourne une liste d'objets triables."""
@@ -42,7 +64,11 @@ def get_existing_articles(repo):
         stack = contents if isinstance(contents, list) else [contents]
         while stack:
             item = stack.pop(0)
+<<<<<<< HEAD
             if getattr(item, "type", None) == 'dir':
+=======
+            if item.type == 'dir':
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
                 stack.extend(repo.get_contents(item.path))
                 continue
             if not item.name.lower().endswith('.html'):
@@ -53,6 +79,7 @@ def get_existing_articles(repo):
             date_tag = soup.find('meta', attrs={'property': 'article:published_time'})
             image_tag = soup.find('meta', attrs={'property': 'og:image'})
             title = (title_tag['content'].strip() if title_tag and title_tag.has_attr('content') else item.name)
+<<<<<<< HEAD
             iso_date = date_tag['content'].strip() if date_tag and date_tag.has_attr('content') else None
             if not iso_date:
                 # fallback depuis le début du nom
@@ -68,6 +95,17 @@ def get_existing_articles(repo):
                 'date_human': _to_human(iso_date),
                 'filename': item.name,
                 'image_url': (image_tag['content'].strip() if image_tag and image_tag.has_attr('content') else None),
+=======
+            iso_date = _parse_iso_or_filename(date_tag['content'].strip() if date_tag and date_tag.has_attr('content') else None, item.name)
+            date_human = datetime.datetime.fromisoformat(iso_date.replace('Z','+00:00')).strftime('%d/%m/%Y')
+            image_url = image_tag['content'].strip() if image_tag and image_tag.has_attr('content') else None
+            articles.append({
+                'title': title,
+                'iso_date': iso_date,
+                'date_human': date_human,
+                'filename': item.name,
+                'image_url': image_url,
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
             })
     except GithubException as e:
         if e.status == 404:
@@ -77,7 +115,11 @@ def get_existing_articles(repo):
     print(f"{len(articles)} articles existants trouvés.")
     return articles
 
+<<<<<<< HEAD
 def publish_article_and_update_index(title: str, summary: str, image_url: str | None, config: dict, published_at: str | None = None):
+=======
+def publish_article_and_update_index(title, summary, image_url, config):
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
     """
     Crée un nouvel article HTML dans /articles, puis reconstruit index.html
     en listant les 10 derniers par date ISO (meta article:published_time).
@@ -89,7 +131,11 @@ def publish_article_and_update_index(title: str, summary: str, image_url: str | 
         g = Github(token)
         repo = g.get_repo(repo_name)
 
+<<<<<<< HEAD
         now_utc = datetime.datetime.now(datetime.timezone.utc)
+=======
+        now = datetime.datetime.now(datetime.timezone.utc)
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
         slug = slugify(title)
         filename = f"{now_utc.strftime('%Y-%m-%d')}-{slug}.html"
 
@@ -103,8 +149,13 @@ def publish_article_and_update_index(title: str, summary: str, image_url: str | 
             title=title,
             summary=summary_html,
             image_url=image_url,
+<<<<<<< HEAD
             iso_date=iso_pub,
             date_human=_to_human(iso_pub),
+=======
+            iso_date=now.isoformat(),
+            date_human=now.strftime('%d/%m/%Y'),
+>>>>>>> f1093225e097ed469ec0914a19a758b8892df8cd
             brand_name=config['brand_name'],
             brand_color=config['brand_color'],
             production_url=config['production_url'],
