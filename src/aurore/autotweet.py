@@ -1,52 +1,61 @@
 # -*- coding: utf-8 -*-
 import os
-import sys
 import tweepy
 import google.generativeai as genai
 
-def generate_tweet_text(title, summary, config):
-    """Génère le texte du tweet en utilisant Gemini."""
-    print("Génération du texte du tweet avec Gemini...")
+def _compact(s: str) -> str:
+    return " ".join((s or "").split())
+
+def tweet_from_prompt(cfg: dict, title: str, summary: str, source_name: str, url: str) -> bool:
+    """
+    Utilise TON 'gemini_tweet_prompt' + contexte, génère 1 ligne (< 280 chars), et tweet.
+    Si Twitter n'est pas configuré, on log et on sort sans échec.
+    """
+    api_key = os.environ.get("TWITTER_API_KEY")
+    api_secret = os.environ.get("TWITTER_API_SECRET_KEY")
+    access_token = os.environ.get("TWITTER_ACCESS_TOKEN")
+    access_secret = os.environ.get("TWITTER_ACCESS_TOKEN_SECRET")
+
+    if not all([api_key, api_secret, access_token, access_secret]):
+        print("Twitter non configuré — tweet sauté.")
+        return False
+
+    gemini_tweet_prompt = (cfg.get("gemini_tweet_prompt") or "").strip()
+    brand = (cfg.get("brand_name") or "").strip()
+
+    text = None
     try:
-        gemini_api_key = os.environ["GEMINI_API_KEY"]
-        genai.configure(api_key=gemini_api_key)
-        
-        model = genai.GenerativeModel('gemini-1.5-flash')
-
-        # On assemble le prompt multi-lignes depuis la config
-        prompt_text = "".join(config['gemini_tweet_prompt'])
-        prompt = prompt_text + f"\n\nTITRE: {title}\n\nRÉSUMÉ: {summary}"
-        
-        response = model.generate_content(prompt)
-        return response.text.strip()
-    except Exception as e:
-        print(f"Erreur lors de la génération du tweet : {e}")
-        return f"{title}"
-
-def post_tweet(article_title, article_summary, article_url, config):
-    print("Publication du tweet...")
-    try:
-        consumer_key = os.environ['TWITTER_API_KEY']
-        consumer_secret = os.environ['TWITTER_API_SECRET_KEY']
-        access_token = os.environ['TWITTER_ACCESS_TOKEN']
-        access_token_secret = os.environ['TWITTER_ACCESS_TOKEN_SECRET']
-        
-        tweet_text = generate_tweet_text(article_title, article_summary, config)
-        final_tweet = f"{tweet_text}\n\nLien vers l'analyse complète :\n{article_url}"
-
-        client = tweepy.Client(
-            consumer_key=consumer_key,
-            consumer_secret=consumer_secret,
-            access_token=access_token,
-            access_token_secret=access_token_secret
+        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+        model = genai.GenerativeModel(
+            "gemini-1.5-flash",
+            generation_config={"temperature": 0.6, "response_mime_type": "text/plain"},
         )
-        
-        response = client.create_tweet(text=final_tweet)
-        print(f"Tweet posté avec succès: https://x.com/user/status/{response.data['id']}")
-
-    except KeyError as e:
-        print(f"Erreur critique : Le secret Twitter {e} est manquant.")
-        sys.exit(1)
+        prompt = (
+            f"{gemini_tweet_prompt}\n\n"
+            f"Données:\n"
+            f"- Titre: {title}\n"
+            f"- Résumé: {summary}\n"
+            f"- Source: {source_name}\n"
+            f"- Lien: {url}\n\n"
+            f"Rends UNE LIGNE unique. Max 280 caractères. Pas d'emojis."
+        )
+        resp = model.generate_content(prompt)
+        text = _compact(getattr(resp, "text", "") or "")
     except Exception as e:
-        print(f"Erreur inattendue lors de la publication du tweet : {e}")
-        sys.exit(1)
+        print(f"WARN tweet LLM: {e}")
+
+    if not text:
+        # fallback déterministe ultra simple
+        text = f"{title} ({source_name}) {url} #{brand or 'Horizon'}"
+    if len(text) > 280:
+        text = text[:277] + "…"
+
+    try:
+        auth = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_secret)
+        api = tweepy.API(auth)
+        api.update_status(status=text)
+        print(f"Tweet publié: {text}")
+        return True
+    except Exception as e:
+        print(f"Tweet échoué: {e}")
+        return False
