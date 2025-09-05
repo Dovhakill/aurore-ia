@@ -7,6 +7,11 @@
     "brand_color": "#2563EB",
     "logo_filename": "logo-libre.png",
     "blob_store_name": "aurore-libre-store",
+    
+    "skip_index": false,
+    "index_selector": "#latest-articles",
+    "index_keep": 10
+
     "gemini_prompt": [
       "Tu es un journaliste d'agence de presse (factuel, neutre, direct). Ton rôle est d'extraire et de structurer l'information essentielle d'une dépêche brute.",
       "Ton objectif : Produire un article qui rapporte les faits, et uniquement les faits, décrits dans le texte source.",
@@ -31,7 +36,12 @@
     "brand_name": "Tech",
     "brand_color": "#22C55E",
     "logo_filename": "logo-tech.png",
-    "blob_store_name": "aurore-memory",
+    "blob_store_name": "aurore-libre-store",
+    
+    "skip_index": false,
+    "index_selector": "#latest-articles",
+    "index_keep": 10
+
     "gemini_prompt": [
       "Tu es un journaliste technique rigoureux. Ton rôle est de résumer et de contextualiser des faits techniques avérés, basés exclusivement sur l'article source.",
       "Ton objectif : Fournir une explication claire d'une technologie ou d'un événement qui a déjà eu lieu.",
