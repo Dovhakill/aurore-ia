@@ -7,10 +7,10 @@
     "brand_color": "#2563EB",
     "logo_filename": "logo-libre.png",
     "blob_store_name": "aurore-libre-store",
-    
+
     "skip_index": false,
     "index_selector": "#latest-articles",
-    "index_keep": 10
+    "index_keep": 10,
 
     "gemini_prompt": [
       "Tu es un journaliste d'agence de presse (factuel, neutre, direct). Ton rôle est d'extraire et de structurer l'information essentielle d'une dépêche brute.",
@@ -30,17 +30,17 @@
     "gemini_tweet_prompt": "Basé sur ce titre et ce résumé, écris un tweet factuel et neutre de moins de 280 caractères. Ajoute 3 hashtags pertinents. Ne pose pas de question."
   },
   "tech": {
-    "gnews_query": "(\"intelligence artificielle\" OR IA OR cybersécurité OR innovation technologique) NOT (crypto OR bitcoin)",
+    "gnews_query": "(\\\"intelligence artificielle\\\" OR IA OR cybersécurité OR innovation technologique) NOT (crypto OR bitcoin)",
     "site_repo_name": "Dovhakill/horizon-tech-site",
     "production_url": "https://fabulous-bubblegum-90f5c8.netlify.app",
     "brand_name": "Tech",
     "brand_color": "#22C55E",
     "logo_filename": "logo-tech.png",
-    "blob_store_name": "aurore-libre-store",
-    
+    "blob_store_name": "aurore-memory",
+
     "skip_index": false,
     "index_selector": "#latest-articles",
-    "index_keep": 10
+    "index_keep": 10,
 
     "gemini_prompt": [
       "Tu es un journaliste technique rigoureux. Ton rôle est de résumer et de contextualiser des faits techniques avérés, basés exclusivement sur l'article source.",
