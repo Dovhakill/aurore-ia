@@ -1,252 +1,183 @@
 # -*- coding: utf-8 -*-
 """
 news_fetch.py
-- Compatible avec différentes versions de la lib 'gnews' (get_news_by_query / get_news / get_news_by_keyword).
-- Fallback robuste via RSS Google News si la lib ne fournit pas la méthode attendue.
-- Extraction de texte simple via BeautifulSoup.
+- Récupère des articles via RSS Google News (search OU topic)
+- Résout les liens Google News vers l'URL finale
+- Extrait un texte lisible depuis la page (HTML -> texte)
 """
+from __future__ import annotations
 
-from typing import List, Dict, Any, Optional
-from urllib.parse import urlparse, urlencode
-from email.utils import parsedate_to_datetime
+import time
+import html
+import re
 from datetime import datetime, timezone
+from typing import Dict, Any, List, Optional
+from urllib.parse import urlencode, quote, urlparse, parse_qs
+
 import requests
 import feedparser
 from bs4 import BeautifulSoup
 
-try:
-    # La lib n'est pas obligatoire si le fallback RSS suffit
-    from gnews import GNews
-except Exception:
-    GNews = None
 
-USER_AGENT = (
+UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    "(KHTML, like Gecko) Chrome/123.0 Safari/537.36"
 )
 
-# --------------------------
-# Utilitaires
-# --------------------------
-def _to_iso(dt_like: Optional[str]) -> str:
-    if not dt_like:
+
+def _iso(dt_struct) -> str:
+    if not dt_struct:
         return datetime.now(timezone.utc).isoformat()
     try:
-        dt = parsedate_to_datetime(str(dt_like))
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc).isoformat()
+        return datetime.fromtimestamp(time.mktime(dt_struct), tz=timezone.utc).isoformat()
     except Exception:
-        # Certains feeds donnent déjà de l’ISO 8601 → on tente direct
-        try:
-            s = str(dt_like).strip()
-            if s.endswith("Z"):
-                return datetime.fromisoformat(s.replace("Z", "+00:00")).astimezone(timezone.utc).isoformat()
-            return datetime.fromisoformat(s).astimezone(timezone.utc).isoformat()
-        except Exception:
-            return datetime.now(timezone.utc).isoformat()
+        return datetime.now(timezone.utc).isoformat()
 
-def _extract_text(html: str) -> str:
-    soup = BeautifulSoup(html, "html.parser")
-    # Nettoyage des éléments non textuels
-    for tag in soup(["script", "style", "noscript", "header", "footer", "aside", "form", "nav"]):
+
+def _final_url(url: str, timeout: float = 10.0) -> str:
+    """
+    Résout les redirections Google News vers la source d'origine.
+    - Si le lien contient ?url=, on renvoie ce param.
+    - Sinon on suit les redirections HTTP.
+    """
+    if not url:
+        return url
+
+    try:
+        parsed = urlparse(url)
+        qs = parse_qs(parsed.query or "")
+        if "url" in qs and qs["url"]:
+            return qs["url"][0]
+    except Exception:
+        pass
+
+    try:
+        with requests.get(url, headers={"User-Agent": UA}, timeout=timeout, allow_redirects=True) as r:
+            r.raise_for_status()
+            return r.url
+    except Exception:
+        return url
+
+
+def _extract_text_from_html(html_str: str) -> str:
+    """Extraction simple : priorité aux <article>, sinon concat <p>."""
+    soup = BeautifulSoup(html_str, "html.parser")
+
+    for tag in soup(["script", "style", "noscript", "svg", "picture", "source"]):
         tag.decompose()
-    parts = []
-    # On reste simple et robuste : paragraphes suffisamment longs
-    for p in soup.find_all("p"):
-        t = p.get_text(" ", strip=True)
-        if t and len(t) >= 40:
-            parts.append(t)
-    text = "\n\n".join(parts)
-    return text[:8000].strip()
 
-def _fetch_article_body(url: str) -> Optional[str]:
-    try:
-        if not url or not url.startswith(("http://", "https://")):
-            return None
-        r = requests.get(url, timeout=12, headers={"User-Agent": USER_AGENT})
-        r.raise_for_status()
-        text = _extract_text(r.text)
-        if len(text) < 80:
-            return None
-        return text
-    except Exception as e:
-        print(f"WARN fetch échoué {url}: {e}")
-        return None
+    # zone article prioritaire
+    main = soup.find("article")
+    if not main:
+        # fallback : gros container de contenu possible
+        main = soup.find("main") or soup.find("div", attrs={"role": "main"}) or soup
 
-def _clean_url(url: str) -> Optional[str]:
+    # récup paragraphes
+    paras = []
+    for p in main.find_all("p"):
+        txt = p.get_text(" ", strip=True)
+        if txt and len(txt) > 30:
+            paras.append(txt)
+
+    text = "\n\n".join(paras).strip()
+
+    # mini nettoyage
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text
+
+
+def _fetch_article_body(url: str, timeout: float = 12.0) -> str:
     try:
-        if not url:
-            return None
-        u = url.strip()
-        if not u.startswith(("http://", "https://")):
-            return None
-        if "example.com" in u or "URL_DE_TON_ARTICLE_SOURCE_POUR_LENQUETE" in u:
-            return None
-        return u
+        with requests.get(url, headers={"User-Agent": UA}, timeout=timeout) as r:
+            r.raise_for_status()
+            return _extract_text_from_html(r.text)
     except Exception:
-        return None
+        return ""
 
-def _source_from_url(url: str) -> str:
+
+def _domain(u: str) -> str:
     try:
-        netloc = urlparse(url).netloc
-        return netloc[4:] if netloc.startswith("www.") else netloc
+        return urlparse(u).netloc or ""
     except Exception:
-        return "source"
+        return ""
 
-# --------------------------
-# GNews lib (multi-versions)
-# --------------------------
-def _via_gnews_library(config: Dict[str, Any]) -> List[Dict[str, Any]]:
-    if GNews is None:
-        return []
 
-    query = (config.get("gnews_query") or "").strip()
-    if not query:
-        print("gnews_query manquant dans config de la verticale.")
-        return []
+def _build_rss_url_from_query(query: str, lang: str, country: str) -> str:
+    # query arrive depuis config.json : les guillemets sont déjà échappés pour le JSON.
+    q = query
+    hl = f"{lang}-{country}"
+    qs = {
+        "q": q,
+        "hl": hl,
+        "gl": country,
+        "ceid": f"{country}:{lang}",
+    }
+    return "https://news.google.com/rss/search?" + urlencode(qs, safe=" :()\"")
 
-    lang = config.get("gnews_lang") or None
-    country = config.get("gnews_country") or None
-    max_results = int(config.get("max_results", 10))
 
-    google = GNews(
-        language=lang if lang else None,
-        country=country if country else None,
-        max_results=max_results,
-        period="1d",
+def _build_rss_url_from_topic(topic: str, lang: str, country: str) -> str:
+    hl = f"{lang}-{country}"
+    return (
+        f"https://news.google.com/rss/headlines/section/topic/{quote(topic)}"
+        f"?hl={hl}&gl={country}&ceid={country}:{lang}"
     )
 
-    raw = None
-    # Supporte plusieurs variantes de la lib
-    if hasattr(google, "get_news_by_query"):
-        raw = google.get_news_by_query(query)
-    elif hasattr(google, "get_news"):
-        raw = google.get_news(query)
-    elif hasattr(google, "get_news_by_keyword"):
-        raw = google.get_news_by_keyword(query)
-    else:
-        print("Version de gnews non supportée (aucune méthode de requête).")
 
-    if not raw:
-        return []
+def get_news_from_api(vcfg: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Retourne une liste d'articles normalisés:
+    [
+      {
+        "url": "...",               # URL finale
+        "title": "...",
+        "content": "...",           # texte long extrait
+        "publishedAt": "ISO8601",
+        "source": "domaine"
+      },
+      ...
+    ]
+    """
+    lang = (vcfg.get("gnews_lang") or "fr").lower()
+    country = (vcfg.get("gnews_country") or "FR").upper()
+    max_results = int(vcfg.get("max_results") or 8)
 
-    print(f"{len(raw)} bruts depuis gnews (lib).")
-    cleaned: List[Dict[str, Any]] = []
-    for it in raw:
-        # La structure peut varier selon la version → on essaie plusieurs clés
-        url = _clean_url(it.get("url") or it.get("link") or "")
-        if not url:
+    rss_url: Optional[str] = None
+    if vcfg.get("gnews_query"):
+        rss_url = _build_rss_url_from_query(vcfg["gnews_query"], lang, country)
+    elif vcfg.get("gnews_topic"):
+        rss_url = _build_rss_url_from_topic(vcfg["gnews_topic"], lang, country)
+
+    items: List[Dict[str, Any]] = []
+
+    if not rss_url:
+        # Rien de configuré
+        return items
+
+    parsed = feedparser.parse(rss_url)
+    entries = parsed.get("entries") or []
+    if not entries:
+        return items
+
+    for e in entries[:max_results]:
+        link = (e.get("link") or "").strip()
+        title = html.unescape((e.get("title") or "").strip())
+        published = _iso(e.get("published_parsed"))
+
+        if not link or not title:
             continue
 
-        title = (it.get("title") or "").strip()
-        published_raw = (
-            it.get("published date")
-            or it.get("published_date")
-            or it.get("publishedAt")
-            or it.get("date")
-            or it.get("published")
+        fin = _final_url(link)
+        text = _fetch_article_body(fin)
+        src = _domain(fin)
+
+        items.append(
+            {
+                "url": fin,
+                "title": title,
+                "content": text or (html.unescape((e.get("summary") or "").strip())),
+                "publishedAt": published,
+                "source": src,
+            }
         )
-        published_iso = _to_iso(published_raw)
 
-        body = _fetch_article_body(url)
-        if not body:
-            desc = (it.get("description") or "").strip()
-            if len(desc) >= 80:
-                body = desc
-            else:
-                print(f"Contenu inexploitable (lib), skip: {url}")
-                continue
-
-        cleaned.append({
-            "url": url,
-            "title": title,
-            "publishedAt": published_iso,
-            "content": body,
-            "source": _source_from_url(url),
-        })
-
-    return cleaned
-
-# --------------------------
-# Fallback RSS Google News
-# --------------------------
-def _build_rss_url(query: str, lang: Optional[str], country: Optional[str]) -> str:
-    base = "https://news.google.com/rss/search"
-    params = {"q": query}
-    # Localisation si fournie dans la conf
-    if lang and country:
-        params["hl"] = lang
-        params["gl"] = country
-        params["ceid"] = f"{country}:{lang}"
-    return f"{base}?{urlencode(params)}"
-
-def _via_google_rss(config: Dict[str, Any]) -> List[Dict[str, Any]]:
-    query = (config.get("gnews_query") or "").strip()
-    if not query:
-        return []
-
-    lang = config.get("gnews_lang") or None
-    country = config.get("gnews_country") or None
-    url = _build_rss_url(query, lang, country)
-    feed = feedparser.parse(url)
-
-    if not feed or not feed.entries:
-        print("RSS Google News vide.")
-        return []
-
-    print(f"{len(feed.entries)} bruts depuis RSS Google News.")
-    cleaned: List[Dict[str, Any]] = []
-    for e in feed.entries[: int(config.get("max_results", 10))]:
-        url = _clean_url(getattr(e, "link", "") or "")
-        if not url:
-            continue
-
-        title = (getattr(e, "title", "") or "").strip()
-        published = getattr(e, "published", None) or getattr(e, "updated", None)
-        published_iso = _to_iso(published)
-        body = _fetch_article_body(url)
-        if not body:
-            summary = (getattr(e, "summary", "") or "").strip()
-            if len(summary) >= 80:
-                body = summary
-            else:
-                print(f"Contenu inexploitable (RSS), skip: {url}")
-                continue
-
-        cleaned.append({
-            "url": url,
-            "title": title,
-            "publishedAt": published_iso,
-            "content": body,
-            "source": _source_from_url(url),
-        })
-
-    return cleaned
-
-# --------------------------
-# Entrée principale
-# --------------------------
-def get_news_from_api(config: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    Essaie d'abord la lib 'gnews' (peu importe la version),
-    puis bascule sur le flux RSS Google News si besoin.
-    """
-    # 1) Lib gnews (multi-versions)
-    try:
-        data = _via_gnews_library(config)
-        if data:
-            return data
-    except Exception as e:
-        print(f"Erreur gnews (lib): {e}")
-
-    # 2) Fallback RSS
-    try:
-        data = _via_google_rss(config)
-        if data:
-            return data
-    except Exception as e:
-        print(f"Erreur RSS: {e}")
-
-    print("GNews n’a rien renvoyé (lib + RSS).")
-    return []
+    return items
