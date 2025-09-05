@@ -31,10 +31,6 @@ def _is_valid_url(u: str) -> bool:
         return False
 
 def _to_iso(dt_like: Optional[str]) -> str:
-    """
-    Normalise la date en ISO 8601 UTC.
-    GNews peut renvoyer: 'Tue, 21 Jan 2025 18:00:00 GMT' ou None.
-    """
     if not dt_like:
         return datetime.now(timezone.utc).isoformat()
     try:
@@ -49,14 +45,12 @@ def _extract_text(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
     for tag in soup(["script", "style", "noscript", "header", "footer", "aside", "form"]):
         tag.decompose()
-    # Heuristique simple : paragraphes non vides et raisonnablement longs
     parts = []
     for p in soup.find_all("p"):
         t = p.get_text(" ", strip=True)
         if t and len(t) >= 40:
             parts.append(t)
     text = "\n\n".join(parts)
-    # garde < 8000 chars pour éviter d’exploser la limite modèle
     return text[:8000].strip()
 
 def _fetch_article_body(url: str) -> Optional[str]:
@@ -65,7 +59,6 @@ def _fetch_article_body(url: str) -> Optional[str]:
         r.raise_for_status()
         text = _extract_text(r.text)
         if len(text) < 80:
-            # Contenu trop court -> inutile pour la synthèse
             return None
         return text
     except Exception as e:
@@ -73,19 +66,6 @@ def _fetch_article_body(url: str) -> Optional[str]:
         return None
 
 def get_news_from_api(config: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    Retourne une liste d’articles exploitables:
-    [
-      {"url":..., "title":..., "publishedAt": ISO8601, "content": ...},
-      ...
-    ]
-    Utilise la config:
-      - gnews_topic (optionnel)
-      - gnews_lang (ex: 'fr', 'en')  [defaut 'en']
-      - gnews_country (ex: 'FR','US') [defaut 'US']
-      - search_query (optionnel)
-      - max_results (optionnel, defaut 10)
-    """
     lang = config.get("gnews_lang", "en")
     country = config.get("gnews_country", "US")
     max_results = int(config.get("max_results", 10))
@@ -122,7 +102,6 @@ def get_news_from_api(config: Dict[str, Any]) -> List[Dict[str, Any]]:
 
         body = _fetch_article_body(url)
         if not body:
-            # Fallback: description si présente
             fallback = (it.get("description") or "").strip()
             if len(fallback) >= 80:
                 body = fallback
@@ -130,7 +109,6 @@ def get_news_from_api(config: Dict[str, Any]) -> List[Dict[str, Any]]:
                 print(f"Contenu inexploitable, skip: {url}")
                 continue
 
-        # Normalisation date
         published_raw = (
             it.get("published date")
             or it.get("published_date")
