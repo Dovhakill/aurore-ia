@@ -1,34 +1,25 @@
 # -*- coding: utf-8 -*-
-import os
-import sys
-import re
 import requests
+from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
-
-from gnews import GNews
 from bs4 import BeautifulSoup
+from gnews import GNews
 
 USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
 
-BAD_URL_PATTERNS = (
-    "URL_DE_TON_ARTICLE_SOURCE_POUR_LENQUETE",
-    "example.com",
-)
-
-def _is_valid_url(u: str) -> bool:
-    if not u or any(x in u for x in BAD_URL_PATTERNS):
-        return False
+def extract_source_name(url: str) -> str:
     try:
-        p = urlparse(u)
-        return p.scheme in ("http", "https") and bool(p.netloc)
+        netloc = urlparse(url).netloc
+        if netloc.startswith("www."):
+            netloc = netloc[4:]
+        return netloc
     except Exception:
-        return False
+        return "source"
 
 def _to_iso(dt_like: Optional[str]) -> str:
     if not dt_like:
@@ -66,21 +57,26 @@ def _fetch_article_body(url: str) -> Optional[str]:
         return None
 
 def get_news_from_api(config: Dict[str, Any]) -> List[Dict[str, Any]]:
-    lang = config.get("gnews_lang", "en")
-    country = config.get("gnews_country", "US")
-    max_results = int(config.get("max_results", 10))
-    topic = config.get("gnews_topic")
-    query = config.get("search_query")
+    """Lit gnews_query dans ta conf, récupère et nettoie les articles."""
+    query = (config.get("gnews_query") or "").strip()
+    if not query:
+        print("gnews_query manquant dans config de la verticale.")
+        return []
 
-    google = GNews(language=lang, country=country, max_results=max_results, period="1d")
+    # Paramètres optionnels (si tu les ajoutes dans ta conf)
+    lang = config.get("gnews_lang")  # ex: "fr" / "en"
+    country = config.get("gnews_country")  # ex: "FR" / "US"
+    max_results = int(config.get("max_results", 10))
+
+    google = GNews(
+        language=lang if lang else None,
+        country=country if country else None,
+        max_results=max_results,
+        period="1d",
+    )
 
     try:
-        if query:
-            raw = google.get_news_by_query(query)
-        elif topic:
-            raw = google.get_top_news_by_topic(topic)
-        else:
-            raw = google.get_top_news()
+        raw = google.get_news_by_query(query)
     except Exception as e:
         print(f"Erreur GNews: {e}")
         return []
@@ -90,32 +86,25 @@ def get_news_from_api(config: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
 
     print(f"{len(raw)} bruts depuis GNews.")
-
-    cleaned: List[Dict[str, Any]] = []
+    cleaned = []
     for it in raw:
         url = (it.get("url") or "").strip()
-        title = (it.get("title") or "").strip()
-
-        if not _is_valid_url(url):
-            print(f"Skip URL invalide: {url or '<vide>'}")
+        if not url or "example.com" in url or "URL_DE_TON_ARTICLE_SOURCE_POUR_LENQUETE" in url:
             continue
+
+        title = (it.get("title") or "").strip()
+        published_raw = it.get("published date") or it.get("published_date") or it.get("publishedAt") or it.get("date")
+        published_iso = _to_iso(published_raw)
 
         body = _fetch_article_body(url)
         if not body:
-            fallback = (it.get("description") or "").strip()
-            if len(fallback) >= 80:
-                body = fallback
+            # fallback: description si assez longue
+            desc = (it.get("description") or "").strip()
+            if len(desc) >= 80:
+                body = desc
             else:
                 print(f"Contenu inexploitable, skip: {url}")
                 continue
-
-        published_raw = (
-            it.get("published date")
-            or it.get("published_date")
-            or it.get("publishedAt")
-            or it.get("date")
-        )
-        published_iso = _to_iso(published_raw)
 
         cleaned.append({
             "url": url,
