@@ -1,60 +1,50 @@
 # -*- coding: utf-8 -*-
-import os
-import re
-import sys
-import json
+import os, re
 import google.generativeai as genai
 
-def _parse_as_json(text: str):
-    try:
-        obj = json.loads(text)
-        return obj.get("title"), obj.get("summary"), obj.get("source_name")
-    except Exception:
-        return None, None, None
-
-def _parse_as_tags(text: str):
-    t = re.search(r'<TITRE>(.*?)</TITRE>', text, re.DOTALL)
-    s = re.search(r'<RESUME>(.*?)</RESUME>', text, re.DOTALL)
+def _parse_tags(text: str):
+    t = re.search(r'<TITRE>(.*?)</TITRE>', text, re.DOTALL | re.IGNORECASE)
+    s = re.search(r'<RESUME>(.*?)</RESUME>', text, re.DOTALL | re.IGNORECASE)
     if t and s:
-        return t.group(1).strip(), s.group(1).strip(), None
-    return None, None, None
+        return t.group(1).strip(), s.group(1).strip()
+    return None, None
 
-def parse_gemini_response(response_text):
-    """Parse la réponse de Gemini pour extraire titre et résumé"""
-    title, summary, _ = _parse_as_tags(response_text)
-    if not (title and summary):
-        title, summary, _ = _parse_as_json(response_text)
-    return title, summary
-
-def summarize_article(article_content: str, config: dict):
+def summarize_article(article_content: str, gemini_prompt: str):
+    """
+    Utilise TON prompt (balises) et renvoie (title, summary).
+    - Aucune réinvention: on envoie tel quel le prompt + le contenu.
+    """
     if not article_content:
-        print("Le contenu de l'article est vide, impossible de résumer.")
         return None, None
-    
+
     try:
-        gemini_api_key = os.environ["GEMINI_API_KEY"]
-        genai.configure(api_key=gemini_api_key)
-        
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # On assemble le prompt multi-lignes depuis la config
-        prompt_text = "".join(config['gemini_prompt'])
-        prompt = prompt_text + f"\n\nArticle source à analyser :\n{article_content}"
-        
-        response = model.generate_content(prompt)
-        
-        title, summary_markdown = parse_gemini_response(response.text)
-        
-        if title and summary_markdown:
-            print(f"Résumé généré avec succès. Titre : {title}")
-            return title, summary_markdown
-        else:
-            print(f"Réponse IA non exploitable: {response.text}")
-            return None, None
-            
+        api_key = os.environ["GEMINI_API_KEY"]
     except KeyError:
-        print("Erreur critique : Le secret GEMINI_API_KEY est manquant.")
-        sys.exit(1)
+        print("GEMINI_API_KEY manquant.")
+        return None, None
+
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(
+            "gemini-1.5-flash",
+            generation_config={
+                "temperature": 0.4,
+                "top_p": 0.95,
+                "max_output_tokens": 1024,
+                "response_mime_type": "text/plain",
+            },
+        )
+        # On construit un simple prompt utilisateur basé sur ton gemini_prompt
+        prompt = f"{gemini_prompt.strip()}\n\nArticle :\n\"\"\"\n{article_content}\n\"\"\""
+        resp = model.generate_content(prompt)
+
+        text = getattr(resp, "text", "") or ""
+        title, summary = _parse_tags(text)
+        if not (title and summary):
+            print(f"Réponse IA non exploitable: {text[:400]}")
+            return None, None
+        return title, summary
+
     except Exception as e:
-        print(f"Erreur inattendue lors de la génération du résumé avec Gemini : {e}")
+        print(f"Erreur Gemini: {e}")
         return None, None
