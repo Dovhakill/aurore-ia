@@ -1,377 +1,359 @@
-# src/aurore/__main__.py
-from __future__ import annotations
-
+# -*- coding: utf-8 -*-
 import os
 import sys
-import re
 import json
-import time
-import hashlib
+import base64
+import re
 from datetime import datetime, timezone
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict
 
-# Libs tierces (présentes dans requirements.txt)
 from github import Github, Auth
-from bs4 import BeautifulSoup  # beautifulsoup4
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from gnews import GNews
 
-# Tweepy facultatif (tweet si clés présentes)
+# Dépendances optionnelles (on gère l'absence proprement)
 try:
-    import tweepy  # type: ignore
+    import tweepy
 except Exception:
-    tweepy = None  # pas de hard fail si non installé
+    tweepy = None
+
+try:
+    from gnews import GNews
+except Exception:
+    GNews = None
+
+try:
+    from bs4 import BeautifulSoup
+except Exception:
+    BeautifulSoup = None
+
 
 # -----------------------------
-# Utilitaires
+# Utils
 # -----------------------------
-def log(msg: str) -> None:
-    print(msg, flush=True)
+def log(msg: str, level: str = "info"):
+    prefix = {
+        "info": "",
+        "ok": "OK – ",
+        "warn": "⚠️  ",
+        "error": "❌ ",
+    }.get(level, "")
+    print(f"{prefix}{msg}")
 
-def getenv_any(*names: str) -> Optional[str]:
-    for n in names:
-        v = os.getenv(n)
-        if v:
-            return v
-    return None
 
-def slugify(text: str) -> str:
-    text = text.lower().strip()
-    # latin chars
-    text = re.sub(r"[àáâäãå]", "a", text)
-    text = re.sub(r"[ç]", "c", text)
-    text = re.sub(r"[èéêë]", "e", text)
-    text = re.sub(r"[ìíîï]", "i", text)
-    text = re.sub(r"[ñ]", "n", text)
-    text = re.sub(r"[òóôöõ]", "o", text)
-    text = re.sub(r"[ùúûü]", "u", text)
-    text = re.sub(r"[ýÿ]", "y", text)
-    text = re.sub(r"[^a-z0-9]+", "-", text)
-    text = re.sub(r"-{2,}", "-", text)
-    return text.strip("-")
+def get_env(name: str, default: Optional[str] = None) -> Optional[str]:
+    val = os.environ.get(name)
+    return val if val not in (None, "", "null", "None") else default
 
-def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
-# -----------------------------
-# Contexte / Config site
-# -----------------------------
-def site_config(site: str) -> dict:
-    site = (site or "tech").strip().lower()
-    if site not in {"tech", "libre"}:
-        site = "tech"
+def slugify(s: str) -> str:
+    s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE).strip().lower()
+    s = re.sub(r"[\s_-]+", "-", s)
+    return s[:90]  # garde court pour les chemins
 
-    # NOTE: adapter ici si les noms de repos changent
-    repo_map = {
-        "tech":  "Dovhakill/horizon-tech-site",
-        "libre": "Dovhakill/horizon-libre-site",
-    }
-    topic_map = {
-        "tech":  "technology",
-        "libre": "technology",  # on reste sur tech, mais filtres éditoriaux côté code
-    }
-    brand_map = {
-        "tech":  "Horizon Tech",
-        "libre": "Horizon Libre",
-    }
 
-    return {
-        "key": site,
-        "brand": brand_map[site],
-        "repo": repo_map[site],
-        "topic": topic_map[site],
-        "index_selector": "#latest-articles",
-        "index_keep": 10,
-        "articles_dir": "articles",
-        "templates_dir": "templates",
-        "article_tpl": "article.html.j2",  # fallback si absent
-    }
+def load_config(path: str = "config.json") -> Dict:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-# -----------------------------
-# GitHub
-# -----------------------------
-def gh_client() -> Github:
-    # priorité aux secrets que tu utilises réellement
-    token = getenv_any("A_GH_TOKEN", "GH_TOKEN", "GITHUB_TOKEN")
-    if not token:
-        raise RuntimeError(
-            "Aucun token GitHub trouvé (A_GH_TOKEN / GH_TOKEN / GITHUB_TOKEN)."
-        )
-    # Auth.Token supprime le warning ‘login_or_token is deprecated’
-    return Github(auth=Auth.Token(token))
 
-def gh_get_file(repo, path: str) -> Tuple[Optional[object], Optional[str]]:
-    """Retourne (ContentFile | None, sha | None)"""
-    try:
-        f = repo.get_contents(path)
-        return f, getattr(f, "sha", None)
-    except Exception:
-        return None, None
-
-def gh_put_file(repo, path: str, content: bytes, message: str) -> None:
-    existing, sha = gh_get_file(repo, path)
-    if existing and sha:
-        repo.update_file(path, message, content, sha)
-    else:
-        repo.create_file(path, message, content)
-
-# -----------------------------
-# Templating
-# -----------------------------
-def env_jinja(templates_dir: str) -> Environment:
-    return Environment(
+def jinja_env() -> Environment:
+    templates_dir = os.path.join(os.path.dirname(__file__), "templates")
+    env = Environment(
         loader=FileSystemLoader(templates_dir),
         autoescape=select_autoescape(["html", "xml"]),
         trim_blocks=True,
         lstrip_blocks=True,
     )
+    return env
 
-def render_article_html(cfg: dict, item: dict) -> str:
-    """
-    item: dict avec au minimum: title, url, published, summary (optionnel)
-    """
-    tpl_dir = cfg["templates_dir"]
-    tpl_name = cfg["article_tpl"]
-    env = env_jinja(tpl_dir)
 
-    # Fallback si le template n'existe pas
-    try:
-        tpl = env.get_template(tpl_name)
-        return tpl.render(
-            site_name=cfg["brand"],
-            title=item["title"],
-            url=item.get("url"),
-            published=item.get("published"),
-            summary=item.get("summary"),
-            content=item.get("content") or item.get("summary") or "",
-            author=item.get("publisher", {}).get("title") if item.get("publisher") else None,
-            created_at=now_iso(),
+# -----------------------------
+# GitHub helpers
+# -----------------------------
+def get_github_client():
+    token = (
+        get_env("A_GH_TOKEN")
+        or get_env("GH_TOKEN")
+        or get_env("GITHUB_TOKEN")
+    )
+    if not token:
+        raise RuntimeError("Aucun token GitHub (A_GH_TOKEN / GH_TOKEN / GITHUB_TOKEN).")
+    return Github(auth=Auth.Token(token))
+
+
+def get_repo_for_site(site: str):
+    if site == "tech":
+        full = get_env("A_TECH_REPO")
+    elif site == "libre":
+        full = get_env("A_LIBRE_REPO")
+    else:
+        raise RuntimeError(f"Site inconnu: {site}")
+
+    if not full or "/" not in full:
+        raise RuntimeError(
+            f"Repo pour site='{site}' introuvable. "
+            f"Attendu env A_{site.upper()}_REPO sous forme owner/repo."
         )
-    except Exception:
-        # HTML minimaliste si pas de template Jinja
-        body = item.get("content") or item.get("summary") or ""
-        url = item.get("url", "#")
-        pub = item.get("published", "")
-        return f"""<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <title>{item['title']} – {cfg['brand']}</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-</head>
-<body>
-  <main>
-    <article>
-      <h1>{item['title']}</h1>
-      <p><em>Publié: {pub}</em></p>
-      <p>Source: <a href="{url}" rel="noopener noreferrer">{url}</a></p>
-      <hr/>
-      {body}
-    </article>
-  </main>
-</body>
-</html>"""
+    gh = get_github_client()
+    return gh.get_repo(full), full
 
-# -----------------------------
-# Ingestion news (GNews)
-# -----------------------------
-def fetch_candidates(cfg: dict, max_n: int = 12) -> list[dict]:
-    g = GNews(language="fr", country="FR", max_results=max_n)
-    # topic générique; tu peux affiner par site si besoin
+
+def gh_read_text(repo, path: str) -> Tuple[Optional[str], Optional[str]]:
     try:
-        news = g.get_news_by_topic(cfg["topic"])
+        f = repo.get_contents(path)
+        content = base64.b64decode(f.content).decode("utf-8")
+        return content, f.sha
     except Exception:
-        news = g.get_top_news()
-    return news or []
+        return None, None
 
-def pick_latest_uncrawled(cands: list[dict]) -> Optional[dict]:
-    if not cands:
-        return None
-    # tri par date si dispo
-    def key(x):
-        # GNews retourne 'published date' str; on hache pour fallback
-        ts = x.get("published date") or x.get("published")
+
+def gh_write_text(repo, path: str, text: str, message: str, sha: Optional[str] = None):
+    encoded = text.encode("utf-8")
+    content = base64.b64encode(encoded).decode("ascii")
+
+    if sha:
+        repo.update_file(path, message, text, sha, branch=repo.default_branch)
+    else:
+        repo.create_file(path, message, text, branch=repo.default_branch)
+
+
+# -----------------------------
+# NEWS → sélection minimale
+# -----------------------------
+def fetch_candidates(site: str, max_items: int = 8) -> List[Dict]:
+    """Retourne une petite liste d’items (titre, url, date, source).
+    Utilise GNews si dispo, sinon renvoie une liste vide -> le job sortira proprement."""
+    items: List[Dict] = []
+    if GNews is None:
+        log("GNews indisponible (module non importé).", "warn")
+        return items
+
+    # FR, tech/crypto/IA
+    g = GNews(language="fr", country="FR", period="1d", max_results=max_items)
+    queries = [
+        "intelligence artificielle",
+        "IA",
+        "crypto IA",
+        "open source IA",
+        "machine learning",
+        "blockchain IA",
+    ]
+    for q in queries:
         try:
-            return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+            res = g.get_news(q)
+            for r in res[: max_items // len(queries) + 1]:
+                title = r.get("title") or ""
+                url = r.get("url") or ""
+                published = r.get("published date") or r.get("published") or ""
+                source = (r.get("publisher") or {}).get("title") or r.get("source") or ""
+                if url and title:
+                    items.append(
+                        {
+                            "title": title,
+                            "url": url,
+                            "published": published,
+                            "source": source,
+                        }
+                    )
         except Exception:
-            # petit fallback
-            return int(hashlib.md5((x.get("title","")+x.get("url","")).encode()).hexdigest(), 16) % (10**6)
-    cands = sorted(cands, key=key, reverse=True)
-    return cands[0]
+            continue
+
+    # dédoublonne par URL
+    seen = set()
+    dedup: List[Dict] = []
+    for it in items:
+        if it["url"] in seen:
+            continue
+        seen.add(it["url"])
+        dedup.append(it)
+
+    return dedup[:max_items]
+
+
+def choose_latest_not_posted(cands: List[Dict]) -> Optional[Dict]:
+    # Ici on prend le premier (déjà filtré par fraicheur via GNews).
+    return cands[0] if cands else None
+
 
 # -----------------------------
-# Index patch
+# RENDERING / PATCH INDEX
 # -----------------------------
-def patch_index_html(html: str, cfg: dict, article_path: str, title: str) -> str:
-    soup = BeautifulSoup(html, "html.parser")
-    sel = cfg["index_selector"]
-    keep = cfg["index_keep"]
+def render_article_html(article: Dict) -> str:
+    env = jinja_env()
+    tpl = env.get_template("article.html.j2")
+    return tpl.render(article=article)
 
-    container = soup.select_one(sel)
-    if container is None:
-        # fallback: on crée une liste UL
-        container = soup.new_tag("ul")
-        container["id"] = sel.lstrip("#")
-        # essaye de l’insérer dans <main>, sinon en fin de body
-        main = soup.find("main") or soup.body
-        (main or soup).append(container)
 
-    # Crée le nouvel item en tête
-    li = soup.new_tag("li")
-    a = soup.new_tag("a", href=f"/{article_path}")
-    a.string = title
-    li.append(a)
-    container.insert(0, li)
+def patch_index_html(index_html: str, new_entry: Dict, keep: int = 10) -> str:
+    """Insère dans #latest-articles un <li><a>…</a> …</li>, max keep.
+    Si BeautifulSoup n’est pas dispo, on fait un patch naïf basé sur regex."""
+    href = f"/articles/{new_entry['filename']}"
+    li_html = f'<li><a href="{href}">{new_entry["title"]}</a> <time datetime="{new_entry["iso_date"]}">{new_entry["date"]}</time></li>'
 
-    # Trim
-    items = container.find_all("li")
-    for i in items[keep:]:
-        i.decompose()
+    if BeautifulSoup:
+        soup = BeautifulSoup(index_html, "html.parser")
+        ul = soup.select_one("#latest-articles")
+        if not ul:
+            # crée la liste si absente
+            container = soup.body or soup
+            new_ul = soup.new_tag("ul", id="latest-articles")
+            container.insert(0, new_ul)
+            ul = new_ul
 
-    return str(soup)
+        # prepend
+        ul.insert(0, BeautifulSoup(li_html, "html.parser"))
+
+        # trim
+        lis = ul.find_all("li")
+        for li in lis[keep:]:
+            li.decompose()
+
+        return str(soup)
+
+    # fallback regex si BS4 absent
+    pat = re.compile(r'(<ul[^>]*id="latest-articles"[^>]*>)(.*?)(</ul>)', re.S | re.I)
+    m = pat.search(index_html)
+    if not m:
+        # injecte une UL au début du body
+        index_html = re.sub(
+            r"(<body[^>]*>)",
+            r'\1\n<ul id="latest-articles">\n' + li_html + "\n</ul>\n",
+            index_html,
+            count=1,
+            flags=re.I,
+        )
+        return index_html
+
+    head, inner, tail = m.group(1), m.group(2), m.group(3)
+    # prends les <li> existants
+    existing = re.findall(r"<li>.*?</li>", inner, re.S | re.I)
+    new_list = [li_html] + existing
+    new_list = new_list[:keep]
+    patched = head + "\n" + "\n".join(new_list) + "\n" + tail
+    return index_html[: m.start()] + patched + index_html[m.end() :]
+
 
 # -----------------------------
-# Tweet (optionnel)
+# TWITTER (optionnel)
 # -----------------------------
-def maybe_tweet(title: str, url: str) -> None:
-    api_key = getenv_any("TWITTER_API_KEY")
-    api_secret = getenv_any("TWITTER_API_SECRET", "TWITTER_API_SECRET_KEY")
-    access_token = getenv_any("TWITTER_ACCESS_TOKEN")
-    access_secret = getenv_any("TWITTER_ACCESS_SECRET", "TWITTER_ACCESS_TOKEN_SECRET")
+def maybe_tweet(title: str, url: str):
+    keys = {
+        "api_key": get_env("TWITTER_API_KEY"),
+        "api_secret": get_env("TWITTER_API_SECRET"),
+        "access_token": get_env("TWITTER_ACCESS_TOKEN"),
+        "access_secret": get_env("TWITTER_ACCESS_SECRET"),
+    }
+    if not all(keys.values()):
+        log("Clés Twitter manquantes — tweet ignoré.", "warn")
+        return
 
-    if not (api_key and api_secret and access_token and access_secret and tweepy):
-        log("Clés Twitter manquantes — tweet ignoré.")
+    if tweepy is None:
+        log("tweepy indisponible — tweet ignoré.", "warn")
         return
 
     try:
-        client = tweepy.Client(
-            consumer_key=api_key,
-            consumer_secret=api_secret,
-            access_token=access_token,
-            access_token_secret=access_secret,
+        auth = tweepy.OAuth1UserHandler(
+            keys["api_key"], keys["api_secret"], keys["access_token"], keys["access_secret"]
         )
-        status = f"{title} {url}"
-        client.create_tweet(text=status[:280])
-        log("Tweet publié.")
+        api = tweepy.API(auth)
+        api.update_status(status=f"{title} {url}")
+        log("Tweet publié.", "ok")
     except Exception as e:
-        log(f"Tweet échoué: {e}")
+        log(f"Tweet échec: {e}", "warn")
+
 
 # -----------------------------
-# MAIN
+# MAIN PIPELINE
 # -----------------------------
-def main() -> int:
-    # Mode/Contexte
-    site_env = os.getenv("SITE", "tech")
-    cfg = site_config(site_env)
+def main():
+    site = get_env("SITE", "tech").strip().lower()
+    print(f"  ")
+    log(f"Démarrage du bot Aurore (mode SAFE index).")
 
-    # Lecture de config.json (optionnel, si tu l’utilises pour d’autres réglages)
-    try:
-        with open("config.json", "r", encoding="utf-8") as f:
-            _ = json.load(f)
-        log("Démarrage du bot Aurore (mode SAFE index).")
-    except Exception:
-        log("Démarrage du bot Aurore (mode SAFE index). (config.json introuvable/ignoré)")
+    # Lecture config (juste pour valider le JSON)
+    cfg = load_config()
+    _ = cfg  # si on n'utilise pas tout, au moins on valide le fichier
+    log("config.json OK", "ok")
 
-    # 1) Collecte
-    try:
-        cands = fetch_candidates(cfg, max_n=12)
-        log(f"{len(cands)} bruts collectés.")
-    except Exception as e:
-        log(f"Erreur collecte news: {e}")
-        cands = []
+    # 1) fetch cands
+    cands = fetch_candidates(site, max_items=8)
+    log(f"{len(cands)} bruts collectés.")
 
-    # Ancienne mémoire (non branchée ici)
+    # 2) mémoire legacy (non utilisée ici, juste info)
     log("Legacy mémoire: 0 URLs")
 
-    # 2) Sélection
+    # 3) sélection
     log("Sélection du plus récent non traité…")
-    item = pick_latest_uncrawled(cands)
-    if not item:
+    chosen = choose_latest_not_posted(cands)
+    if not chosen:
         log("Aucun article publiable après filtrage.")
-        return 0
+        return
 
-    title = item.get("title", "Sans titre").strip()
-    url = item.get("url", "")
-    published = item.get("published date") or item.get("published") or now_iso()
-    log(f"Choisi: {title}\nURL: {url} — Date: {published}")
+    title = chosen["title"].strip()
+    source_url = chosen["url"].strip()
+    pub = chosen.get("published") or ""
+    src = chosen.get("source") or ""
+    # Slug du fichier
+    slug = slugify(title)
+    filename = f"{slug}.html"
 
-    # 3) Prépare contenu (summary très simple si pas d’IA branchée ici)
-    # (Tu peux brancher ton module summarize ici si tu préfères)
-    item_out = {
+    # 4) article dict pour template
+    now = datetime.now(timezone.utc)
+    article = {
         "title": title,
-        "url": url,
-        "published": published,
-        "summary": item.get("description") or item.get("content") or "",
-        "publisher": item.get("publisher"),
+        "source_url": source_url,
+        "source_name": src,
+        "created_at": now.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "iso_created_at": now.isoformat(),
+        # Champs communs que tes templates peuvent attendre:
+        "excerpt": f"Résumé rapide — {title}",
+        "body": f"<p>Découvrez l’article original&nbsp;: <a href=\"{source_url}\">{title}</a>.<br>Source&nbsp;: {src or 'inconnu'}.</p>",
+        "cover": None,
+        "tags": ["IA", "Tech"] if site == "tech" else ["Libre", "IA"],
+        "site": site,
     }
 
-    # 4) Render HTML
-    html = render_article_html(cfg, item_out)
+    # 5) rendu HTML
+    html = render_article_html(article)
 
-    # 5) Publication GitHub
-    gh = gh_client()
-    repo = gh.get_repo(cfg["repo"])
+    # 6) push sur repo du site
+    repo, repo_full = get_repo_for_site(site)
+    article_path = f"articles/{filename}"
+    log(f"Publication article → {repo_full}:{article_path}")
 
-    # path
-    base_slug = slugify(title)
-    slug = base_slug
-    article_dir = cfg["articles_dir"].strip("/")
+    old, sha = gh_read_text(repo, article_path)
+    commit_msg = f"chore({site}): publication {filename}"
+    gh_write_text(repo, article_path, html, commit_msg, sha=sha)
 
-    # évite collision
-    path = f"{article_dir}/{slug}.html"
-    try:
-        existing, _ = gh_get_file(repo, path)
-        if existing:
-            slug = f"{base_slug}-{int(time.time())}"
-            path = f"{article_dir}/{slug}.html"
-    except Exception:
-        pass
-
-    # commit fichier article
-    gh_put_file(
-        repo,
-        path,
-        html.encode("utf-8"),
-        message=f"chore(aurore): publier article: {title}",
-    )
-    log(f"Publication article → {cfg['repo']}:{path}")
-
-    # 6) Patch index.html (#latest-articles)
-    try:
-        # on suppose que le fichier racine s’appelle index.html
-        idx_file, idx_sha = gh_get_file(repo, "index.html")
-        if idx_file and getattr(idx_file, "decoded_content", None):
-            idx_html = idx_file.decoded_content.decode("utf-8", errors="replace")
+    # 7) patch index.html (prepend dans #latest-articles, keep=10)
+    idx_html, idx_sha = gh_read_text(repo, "index.html")
+    if idx_html:
+        entry = {
+            "title": title,
+            "filename": filename,
+            "date": now.strftime("%Y-%m-%d"),
+            "iso_date": now.date().isoformat(),
+        }
+        new_idx = patch_index_html(idx_html, entry, keep=10)
+        if new_idx != idx_html:
+            gh_write_text(repo, "index.html", new_idx, f"chore({site}): index patch", sha=idx_sha)
+            log("Index: patch OK via sélecteur '#latest-articles' (keep=10).", "ok")
         else:
-            idx_html = "<!doctype html><html><body><main><ul id='latest-articles'></ul></main></body></html>"
+            log("Index: aucun changement détecté.", "warn")
+    else:
+        log("Index: fichier index.html introuvable — patch ignoré.", "warn")
 
-        updated = patch_index_html(idx_html, cfg, path, title)
-        if idx_sha:
-            repo.update_file("index.html", "chore(aurore): maj index", updated.encode("utf-8"), idx_sha)
-        else:
-            repo.create_file("index.html", "chore(aurore): créer index", updated.encode("utf-8"))
-        log(f"Index: patch OK via sélecteur '{cfg['index_selector']}' (keep={cfg['index_keep']}).")
-    except Exception as e:
-        log(f"Index: patch ignoré ({e}).")
+    # 8) Tweet (si clés présentes)
+    maybe_tweet(title, f"https://{repo.owner.login}.github.io/{repo.name}/articles/{filename}")
 
-    # 7) Tweet (optionnel)
-    try:
-        # L’URL publique finale de l’article — ici on publie un lien relatif
-        # Si tu as l’URL de prod, remplace par l’URL canonique
-        public_url = f"/{path}"
-        maybe_tweet(title, public_url)
-    except Exception as e:
-        log(f"Tweet: ignoré ({e}).")
-
-    log("OK – Run terminé (SAFE).")
-    return 0
+    log("OK – Run terminé (SAFE).", "ok")
 
 
 if __name__ == "__main__":
     try:
-        sys.exit(main())
-    except KeyboardInterrupt:
-        sys.exit(130)
+        main()
     except Exception as e:
-        # fail visible dans les logs Actions
-        log(f"Erreur fatale:
+        import traceback
+        tb = traceback.format_exc()
+        log(f"Erreur fatale: {e}\n{tb}", level="error")
+        sys.exit(1)
