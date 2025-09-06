@@ -3,8 +3,8 @@ name: Aurore Cron – Libre
 on:
   workflow_dispatch:
   schedule:
-    # 7x / jour (UTC), décalé d’1h vs Tech : 00, 02, 06, 10, 14, 18, 22
-    - cron: '0 0,2,6,10,14,18,22 * * *'
+    # 7x/jour, décalé d’1h (pour ne pas polluer en même temps que Tech)
+    - cron: '0 0,4,8,12,16,20,22 * * *'
 
 permissions:
   contents: write
@@ -17,22 +17,19 @@ jobs:
   run-libre:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install deps
         run: pip install -r requirements.txt
 
-      - name: Lint config.json
+      - name: Sanity check config.json
         run: |
           python - <<'PY'
-          import json
-          json.load(open('config.json','r',encoding='utf-8'))
+          import json; json.load(open('config.json','r',encoding='utf-8'))
           print('config.json OK')
           PY
 
@@ -40,12 +37,9 @@ jobs:
         env:
           PYTHONPATH: src
           TARGET: libre
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-          # (optionnels)
+          # 👉 Même mapping ici
+          A_GH_TOKEN: ${{ secrets.A_GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.A_GH_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          CONSUMER_KEY: ${{ secrets.TWITTER_CONSUMER_KEY }}
-          CONSUMER_SECRET: ${{ secrets.TWITTER_CONSUMER_SECRET }}
-          ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
-          ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+          GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
         run: python -m aurore
