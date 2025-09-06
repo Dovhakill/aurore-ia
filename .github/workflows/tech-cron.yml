@@ -3,8 +3,11 @@ name: Aurore Cron – Tech
 on:
   workflow_dispatch:
   schedule:
-    # 6x/jour, décalé sur les heures paires (UTC)
-    - cron: '0 2,6,10,14,18,22 * * *'
+    # 7x / jour (UTC) : 01, 05, 09, 13, 17, 21, 23
+    - cron: '0 1,5,9,13,17,21,23 * * *'
+
+permissions:
+  contents: write
 
 concurrency:
   group: aurore-tech
@@ -13,18 +16,36 @@ concurrency:
 jobs:
   run-tech:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      TARGET: tech
-      MIN_CHARS: '280'                 # filtre anti-bruit (tu peux monter à 400–600)
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # optionnel
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install -r requirements.txt
-      - name: Run Aurore (tech)
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint config.json
+        run: |
+          python - <<'PY'
+          import json
+          json.load(open('config.json','r',encoding='utf-8'))
+          print('config.json OK')
+          PY
+
+      - name: Run Aurore (Tech)
+        env:
+          PYTHONPATH: src
+          TARGET: tech
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # (optionnels)
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CONSUMER_KEY: ${{ secrets.TWITTER_CONSUMER_KEY }}
+          CONSUMER_SECRET: ${{ secrets.TWITTER_CONSUMER_SECRET }}
+          ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
         run: python -m aurore
