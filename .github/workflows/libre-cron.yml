@@ -1,21 +1,17 @@
-name: Aurore Cron – Libre
+name: run-libre
 
 on:
   workflow_dispatch:
   schedule:
-    # 7×/jour (UTC) — décalé de -1h vs Tech
-    - cron: '0 0,4,8,12,16,20,22 * * *'
+    # 7 publications / jour décalées d'1h vs tech: 01,04,07,10,13,16,19 (à :05)
+    - cron: "5 1,4,7,10,13,16,19 * * *"
 
-concurrency:
-  group: aurore-global
-  cancel-in-progress: false
+permissions:
+  contents: write
 
 jobs:
-  run-libre:
+  run:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,39 +19,48 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install deps
         run: pip install -r requirements.txt
 
       - name: Sanity check config.json
+        env:
+          PYTHONPATH: src
         run: |
           python - <<'PY'
           import json; json.load(open('config.json','r',encoding='utf-8'))
           print('config.json OK')
           PY
 
-      - name: Run Aurore (Libre)
+      - name: Run Aurore (libre)
         env:
-          # --- Sélection du site ---
-          SITE: libre
-
-          # --- GitHub (PAT) ---
-          GH_TOKEN: ${{ secrets.A_GH_TOKEN }}
+          # ====== GitHub (publication) ======
           A_GH_TOKEN: ${{ secrets.A_GH_TOKEN }}
 
-          # --- News & IA ---
-          GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
+          # ====== Sélection du site ======
+          SITE: libre
+
+          # ====== Résolution du module ======
+          PYTHONPATH: src
+
+          # ====== Google / Gemini ======
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
-          # --- Netlify (si utilisé par le script) ---
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NETLIFY_BLOBS_TOKEN: ${{ secrets.NETLIFY_BLOBS_TOKEN }}
+          # ====== Twitter v1.1 (Tweepy) ======
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
 
-          # --- Twitter (mapping -> noms attendus par le code) ---
-          TWITTER_API_KEY:       ${{ secrets.TWITTER_API_KEY }}
-          TWITTER_API_SECRET:    ${{ secrets.TWITTER_API_SECRET_KEY }}
-          TWITTER_ACCESS_TOKEN:  ${{ secrets.TWITTER_ACCESS_TOKEN }}
-          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+          # ====== Twitter v2 (si utilisé) ======
+          TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
+
+          # ====== Alias ======
+          T_API_KEY: ${{ secrets.T_API_KEY }}
+          T_API_SECRET_KEY: ${{ secrets.T_API_SECRET_KEY }}
+          T_ACCESS_TOKEN: ${{ secrets.T_ACCESS_TOKEN }}
+          T_ACCESS_TOKEN_SECRET: ${{ secrets.T_ACCESS_TOKEN_SECRET }}
         run: python -m aurore
