@@ -3,27 +3,30 @@ name: Aurore Cron – Libre
 on:
   workflow_dispatch:
   schedule:
-    # 7x/jour, décalé d’1h (pour ne pas polluer en même temps que Tech)
+    # 7×/jour (UTC) — décalé de -1h vs Tech
     - cron: '0 0,4,8,12,16,20,22 * * *'
 
-permissions:
-  contents: write
-
 concurrency:
-  group: aurore-libre
+  group: aurore-global
   cancel-in-progress: false
 
 jobs:
   run-libre:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    permissions:
+      contents: write
 
-      - uses: actions/setup-python@v5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
-      - name: Install deps
+      - name: Install dependencies
         run: pip install -r requirements.txt
 
       - name: Sanity check config.json
@@ -35,11 +38,24 @@ jobs:
 
       - name: Run Aurore (Libre)
         env:
-          PYTHONPATH: src
-          TARGET: libre
-          # 👉 Même mapping ici
+          # --- Sélection du site ---
+          SITE: libre
+
+          # --- GitHub (PAT) ---
+          GH_TOKEN: ${{ secrets.A_GH_TOKEN }}
           A_GH_TOKEN: ${{ secrets.A_GH_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.A_GH_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+          # --- News & IA ---
           GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+          # --- Netlify (si utilisé par le script) ---
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_BLOBS_TOKEN: ${{ secrets.NETLIFY_BLOBS_TOKEN }}
+
+          # --- Twitter (mapping -> noms attendus par le code) ---
+          TWITTER_API_KEY:       ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET:    ${{ secrets.TWITTER_API_SECRET_KEY }}
+          TWITTER_ACCESS_TOKEN:  ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
         run: python -m aurore
